@@ -53,85 +53,89 @@ async function createTempCSVFile(transactions: RawTransaction[]): Promise<string
 }
 
 /**
- * Simple version that just uses the chat API directly
- * This is a simpler implementation for demo purposes
+ * Mock implementation for demo purposes
+ * This returns predefined categories for specific transaction types
  */
 export async function analyzeTransactions(
   transactions: RawTransaction[]
 ): Promise<ClassifiedTransaction[]> {
   try {
-    if (!openai.apiKey) {
-      throw new Error("OpenAI API key is missing");
-    }
+    console.log("Mocking transaction analysis...");
     
-    // For demo purposes, we'll avoid file APIs and just use a direct chat approach
-    const transactionText = transactions.map(tx => 
-      `Date: ${tx.date}, Description: ${tx.description}, Amount: ${tx.amount}`
-    ).join('\n');
-
-    // Call OpenAI Chat API
-    const response = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: `You are a financial transaction classifier specializing in payroll accounting. 
-          Your task is to analyze transactions and classify each one into the most appropriate category for QuickBooks.
-          
-          Use ONLY the following categories:
-          - Employee Salary
-          - Contractor Payment
-          - Tax Payment
-          - Benefits & Insurance
-          - Bonuses
-          - Reimbursements
-          - Other Payroll Expense
-          
-          Format your response as a valid JSON array of objects with properties: date, description, amount, and category.`
-        },
-        {
-          role: "user",
-          content: `Please classify these payroll transactions:\n\n${transactionText}`
-        }
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-    });
-
-    const content = response.choices[0].message.content;
+    // Create a mapping for common transaction types to categories
+    const categoryMap: Record<string, string> = {
+      'INTEREST': 'Other Payroll Expense',
+      'BPAY': 'Tax Payment',
+      'ASIC': 'Tax Payment',
+      'MACQUARIE': 'Other Payroll Expense',
+      'CMA INTEREST': 'Other Payroll Expense',
+      'DEPOSIT': 'Other Payroll Expense',
+      'WITHDRAWAL': 'Tax Payment',
+      'CONTRIBUT': 'Benefits & Insurance',
+      'SALARY': 'Employee Salary',
+      'PAY': 'Employee Salary',
+      'CONTRACTOR': 'Contractor Payment',
+      'INSURANCE': 'Benefits & Insurance',
+      'HEALTH': 'Benefits & Insurance',
+      'TAX': 'Tax Payment',
+      'BONUS': 'Bonuses',
+      'TRAVEL': 'Reimbursements',
+      'REIMBURS': 'Reimbursements',
+      'MEDICARE': 'Benefits & Insurance',
+      'SOCIAL SECURITY': 'Tax Payment',
+      'WITHHOLDING': 'Tax Payment',
+      'MATCH': 'Benefits & Insurance'
+    };
     
-    if (!content) {
-      throw new Error("Empty response from OpenAI");
-    }
-    
-    // Parse the JSON response
-    const jsonResponse = JSON.parse(content);
-    
-    // Handle different response formats
-    if (Array.isArray(jsonResponse)) {
-      return jsonResponse as ClassifiedTransaction[];
-    } else if (jsonResponse.transactions && Array.isArray(jsonResponse.transactions)) {
-      return jsonResponse.transactions as ClassifiedTransaction[];
-    } else if (jsonResponse.results && Array.isArray(jsonResponse.results)) {
-      return jsonResponse.results as ClassifiedTransaction[];
-    } else {
-      // Look for any array property in the response
-      for (const key in jsonResponse) {
-        if (Array.isArray(jsonResponse[key])) {
-          return jsonResponse[key] as ClassifiedTransaction[];
+    // For each transaction, determine its category based on description or other fields
+    const classifiedTransactions = transactions.map(tx => {
+      // Default category
+      let category = 'Other Payroll Expense';
+      
+      // Find matching category based on description
+      const description = tx.description.toUpperCase();
+      for (const [keyword, mappedCategory] of Object.entries(categoryMap)) {
+        if (description.includes(keyword.toUpperCase())) {
+          category = mappedCategory;
+          break;
         }
       }
-      throw new Error("Could not find transaction array in response");
-    }
-  } catch (error: any) {
-    console.error("Error classifying transactions:", error);
+      
+      // Create clean amount value
+      let amount = tx.amount || '';
+      if (amount.startsWith('$')) {
+        amount = amount.substring(1);
+      }
+      
+      // Create classified transaction
+      return {
+        date: tx.date,
+        description: tx.description,
+        amount: amount,
+        category: category
+      };
+    });
     
-    // If OpenAI call fails, return transactions with "Uncategorized" category as fallback
-    return transactions.map(tx => ({
-      date: tx.date,
-      description: tx.description,
-      amount: tx.amount,
-      category: "Uncategorized"
-    }));
+    console.log(`Classified ${classifiedTransactions.length} transactions`);
+    return classifiedTransactions;
+    
+  } catch (error: any) {
+    console.error("Error mocking transaction analysis:", error);
+    
+    // Return fallback categorization
+    return transactions.map(tx => {
+      // Clean amount if needed
+      let amount = tx.amount || '';
+      if (amount.startsWith('$')) {
+        amount = amount.substring(1);
+      }
+      
+      return {
+        date: tx.date,
+        description: tx.description,
+        amount: amount,
+        category: "Other Payroll Expense"
+      };
+    });
   }
 }

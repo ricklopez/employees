@@ -1,0 +1,7 @@
+﻿123456789 - CASH MANAGEMENT ACCOUNT,ABC Super Fund,,,,,,,,,,,,,,,,
+Date,Category,Description,Debit,Credit,Balance,Category Type,Sub Type,Further Information,Other Reference,Payment Date,Record Date,Franking Percentage,ASX Code,Number of Units,Closed Date,ABA Code,Field2
+28-Apr-17,DEPOSIT,MACQUARIE CMA INTEREST PAID,,$0.02,$3.08 CR,INTEREST,,,,,,,,,,,
+18-Apr-17,WITHDRAWAL,BPAY To ASIC,$47.00,,$3.06 CR,,,,,,,,,,,,
+31-Mar-17,DEPOSIT,MACQUARIE CMA INTEREST PAID,,$0.05,$50.06 CR,INTEREST,,,,,,,,,,,
+28-Feb-17,DEPOSIT,MACQUARIE CMA INTEREST PAID,,$0.01,$50.01 CR,INTEREST,,,,,,,,,,,
+20-Feb-17,DEPOSIT,Trustee Non- Con Contribut,,$50.00,$50.00 CR,,,,,,,,,,,,

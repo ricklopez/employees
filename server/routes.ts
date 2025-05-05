@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -13,16 +13,22 @@ import { analyzeTransactions } from "./services/openai";
 import { parseCsvFile } from "./services/csvParser";
 import fs from "fs";
 
+// Define custom Request type with file property added by multer
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure multer for file upload
+  // Ensure uploads directory exists
+  const uploadDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+  
   const upload = multer({
     storage: multer.diskStorage({
       destination: (req, file, cb) => {
-        const uploadDir = path.join(process.cwd(), 'uploads');
-        // Create directory if it doesn't exist
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
-        }
         cb(null, uploadDir);
       },
       filename: (req, file, cb) => {
@@ -130,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Process CSV file
-  app.post('/api/upload-csv', upload.single('file'), async (req: Request, res: Response) => {
+  app.post('/api/upload-csv', upload.single('file'), async (req: MulterRequest, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });

@@ -53,152 +53,78 @@ async function createTempCSVFile(transactions: RawTransaction[]): Promise<string
 }
 
 /**
- * Uploads a file to OpenAI and returns the file ID
- */
-async function uploadFileToOpenAI(filePath: string): Promise<string> {
-  const fileStream = fs.createReadStream(filePath);
-  const response = await openai.files.create({
-    file: fileStream,
-    purpose: "assistants"
-  });
-  return response.id;
-}
-
-/**
- * Analyzes and classifies transactions using OpenAI
- * @param transactions Raw transactions parsed from CSV
- * @returns Classified transactions with appropriate categories
+ * Simple version that just uses the chat API directly
+ * This is a simpler implementation for demo purposes
  */
 export async function analyzeTransactions(
   transactions: RawTransaction[]
 ): Promise<ClassifiedTransaction[]> {
-  let fileId = '';
-  let tempFilePath = '';
-  
   try {
     if (!openai.apiKey) {
       throw new Error("OpenAI API key is missing");
     }
     
-    // Create a temporary CSV file
-    tempFilePath = await createTempCSVFile(transactions);
-    
-    // Upload the file to OpenAI
-    fileId = await uploadFileToOpenAI(tempFilePath);
-    
-    // Create an Assistant
-    const assistant = await openai.beta.assistants.create({
-      name: "Payroll Classifier",
-      instructions: `You are a financial transaction classifier specializing in payroll. 
-      Analyze the CSV file of transactions and classify each one into the most appropriate category for QuickBooks.
-      
-      Use ONLY the following categories:
-      - Employee Salary
-      - Contractor Payment
-      - Tax Payment
-      - Benefits & Insurance
-      - Bonuses
-      - Reimbursements
-      - Other Payroll Expense
-      
-      Format your response as a valid JSON array of objects with properties: date, description, amount, and category.`,
-      tools: [{ type: "file_search" as const }],
+    // For demo purposes, we'll avoid file APIs and just use a direct chat approach
+    const transactionText = transactions.map(tx => 
+      `Date: ${tx.date}, Description: ${tx.description}, Amount: ${tx.amount}`
+    ).join('\n');
+
+    // Call OpenAI Chat API
+    const response = await openai.chat.completions.create({
       model: OPENAI_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: `You are a financial transaction classifier specializing in payroll accounting. 
+          Your task is to analyze transactions and classify each one into the most appropriate category for QuickBooks.
+          
+          Use ONLY the following categories:
+          - Employee Salary
+          - Contractor Payment
+          - Tax Payment
+          - Benefits & Insurance
+          - Bonuses
+          - Reimbursements
+          - Other Payroll Expense
+          
+          Format your response as a valid JSON array of objects with properties: date, description, amount, and category.`
+        },
+        {
+          role: "user",
+          content: `Please classify these payroll transactions:\n\n${transactionText}`
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
     });
 
-    // For the demo purposes, we'll simplify and use the Chat API directly
-    // In a production app, you'd use the Assistants API with proper error handling
+    const content = response.choices[0].message.content;
     
-    // Create a Thread
-    const thread = await openai.beta.threads.create();
-    
-    // Add a Message to the Thread with instructions
-    const messageContent = "Please analyze the transactions in the attached CSV file and classify each one into the appropriate payroll category. Return the results as a JSON array with date, description, amount, and category properties.";
-    
-    await openai.beta.threads.messages.create(thread.id, {
-      role: "user",
-      content: messageContent
-    });
-    
-    // Run the Assistant
-    const run = await openai.beta.threads.runs.create(thread.id, {
-      assistant_id: assistant.id
-    });
-    
-    // Poll for the Run to complete
-    let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-    
-    // Simple polling - in production, you would use a more robust polling mechanism
-    while (runStatus.status !== "completed" && runStatus.status !== "failed") {
-      // Wait for 1 second before checking again
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
     }
     
-    if (runStatus.status === "failed") {
-      throw new Error(`Run failed with error: ${runStatus.last_error?.message || "Unknown error"}`);
+    // Parse the JSON response
+    const jsonResponse = JSON.parse(content);
+    
+    // Handle different response formats
+    if (Array.isArray(jsonResponse)) {
+      return jsonResponse as ClassifiedTransaction[];
+    } else if (jsonResponse.transactions && Array.isArray(jsonResponse.transactions)) {
+      return jsonResponse.transactions as ClassifiedTransaction[];
+    } else if (jsonResponse.results && Array.isArray(jsonResponse.results)) {
+      return jsonResponse.results as ClassifiedTransaction[];
+    } else {
+      // Look for any array property in the response
+      for (const key in jsonResponse) {
+        if (Array.isArray(jsonResponse[key])) {
+          return jsonResponse[key] as ClassifiedTransaction[];
+        }
+      }
+      throw new Error("Could not find transaction array in response");
     }
-    
-    // Retrieve the messages from the Thread
-    const messages = await openai.beta.threads.messages.list(thread.id);
-    
-    // Get the latest assistant message
-    const lastMessage = messages.data.filter(m => m.role === "assistant")[0];
-    
-    if (!lastMessage || !lastMessage.content || lastMessage.content.length === 0) {
-      throw new Error("No response from assistant");
-    }
-    
-    const content = lastMessage.content[0];
-    
-    if (content.type !== "text") {
-      throw new Error("Unexpected content type in response");
-    }
-    
-    // Try to extract JSON from the text response
-    const contentText = content.text.value;
-    
-    // Find JSON in the response - look for array between square brackets
-    const jsonMatch = contentText.match(/\[[\s\S]*\]/);
-    
-    if (!jsonMatch) {
-      throw new Error("Could not find valid JSON in the response");
-    }
-    
-    const jsonStr = jsonMatch[0];
-    const parsedTransactions = JSON.parse(jsonStr);
-    
-    if (!Array.isArray(parsedTransactions)) {
-      throw new Error("Expected array of transactions in response");
-    }
-    
-    // Clean up - delete the Assistant, Thread, and File
-    await openai.beta.assistants.del(assistant.id);
-    await openai.files.del(fileId);
-    
-    // Return the classified transactions
-    return parsedTransactions as ClassifiedTransaction[];
-    
   } catch (error: any) {
     console.error("Error classifying transactions:", error);
-    
-    // Clean up if file was created
-    if (fileId) {
-      try {
-        await openai.files.del(fileId);
-      } catch (err) {
-        console.error("Error deleting OpenAI file:", err);
-      }
-    }
-    
-    // Clean up temp file
-    if (tempFilePath && fs.existsSync(tempFilePath)) {
-      try {
-        fs.unlinkSync(tempFilePath);
-      } catch (err) {
-        console.error("Error deleting temporary file:", err);
-      }
-    }
     
     // If OpenAI call fails, return transactions with "Uncategorized" category as fallback
     return transactions.map(tx => ({
@@ -207,14 +133,5 @@ export async function analyzeTransactions(
       amount: tx.amount,
       category: "Uncategorized"
     }));
-  } finally {
-    // Clean up temp file
-    if (tempFilePath && fs.existsSync(tempFilePath)) {
-      try {
-        fs.unlinkSync(tempFilePath);
-      } catch (err) {
-        console.error("Error deleting temporary file:", err);
-      }
-    }
   }
 }

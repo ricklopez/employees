@@ -15,10 +15,19 @@ export default function Chat() {
   const { toast } = useToast();
 
   const handleFileUploadClick = () => {
-    toast({
-      title: "File Upload",
-      description: "Please use the chat interface to upload files",
-    });
+    // If there's a ChatContainer component reference, trigger the file upload dialog
+    const chatContainer = document.getElementById('chat-container');
+    const uploadButton = chatContainer?.querySelector('button[class*="bg-primary text-white"]');
+    
+    if (uploadButton) {
+      // If the upload button exists in the chat container, click it
+      (uploadButton as HTMLButtonElement).click();
+    } else {
+      toast({
+        title: "File Upload",
+        description: "Please start a conversation first",
+      });
+    }
   };
 
   // Helper to get agent icon from icon name

@@ -16,7 +16,15 @@ interface ChatContainerProps {
 
 export default function ChatContainer({ onOpenTransactionsModal }: ChatContainerProps) {
   const { currentAgent } = useAgents();
-  const { currentConversation, messages, transactions, transactionSummary, uploadCSV } = useChat();
+  const { 
+    currentConversation, 
+    messages, 
+    transactions, 
+    transactionSummary, 
+    uploadCSV, 
+    createConversation,
+    sendMessage
+  } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -36,14 +44,21 @@ export default function ChatContainer({ onOpenTransactionsModal }: ChatContainer
       setIsProcessing(true);
       setShowFileUpload(false);
       
-      // Create a placeholder message about file upload
-      const placeholderMessage = {
-        id: Date.now(),
-        conversationId: currentConversation?.id || 0,
-        content: `Uploaded file: ${file.name}`,
-        role: 'user' as const,
-        createdAt: new Date()
-      };
+      // Create a conversation first if one doesn't exist
+      let activeConversation = currentConversation;
+      if (!activeConversation && currentAgent) {
+        activeConversation = await createConversation(
+          currentAgent.id, 
+          `CSV Analysis: ${file.name}`
+        );
+      }
+      
+      if (!activeConversation) {
+        throw new Error("Couldn't create a conversation. Please select an agent first.");
+      }
+      
+      // Create a user message about the file upload
+      // (Skip this for now - the upload itself will be enough)
       
       // Process the file
       const result = await uploadCSV(file);

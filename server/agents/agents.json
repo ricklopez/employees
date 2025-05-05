@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Payroll Agent",
+    "description": "Classifies transactions for QuickBooks",
+    "icon": "money-dollar-circle",
+    "promptTemplate": "You are a payroll transaction classifier. Analyze these transactions and categorize them for QuickBooks.",
+    "active": true
+  },
+  {
+    "name": "Support Agent",
+    "description": "Provides help with the application",
+    "icon": "customer-service-2",
+    "promptTemplate": "You are a helpful support agent that can explain how to use the application.",
+    "active": false
+  },
+  {
+    "name": "Sales Analyst",
+    "description": "Analyzes sales data and provides insights",
+    "icon": "line-chart",
+    "promptTemplate": "You are a sales analyst that can provide insights from sales transaction data.",
+    "active": false
+  }
+]

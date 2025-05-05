@@ -7,17 +7,24 @@
     "active": true
   },
   {
-    "name": "Support Agent",
-    "description": "Provides help with the application",
-    "icon": "customer-service-2",
-    "promptTemplate": "You are a helpful support agent that can explain how to use the application.",
-    "active": false
-  },
-  {
-    "name": "Sales Analyst",
+    "name": "Sales Agent",
     "description": "Analyzes sales data and provides insights",
     "icon": "line-chart",
-    "promptTemplate": "You are a sales analyst that can provide insights from sales transaction data.",
-    "active": false
+    "promptTemplate": "You are a sales agent that helps with analyzing sales data, creating sales forecasts, and identifying opportunities.",
+    "active": true
+  },
+  {
+    "name": "Marketing Agent",
+    "description": "Helps with marketing campaigns and content",
+    "icon": "megaphone",
+    "promptTemplate": "You are a marketing expert that can help create campaigns, analyze customer data, and optimize marketing strategies.",
+    "active": true
+  },
+  {
+    "name": "Customer Service",
+    "description": "Provides customer support and resolves issues",
+    "icon": "customer-service-2",
+    "promptTemplate": "You are a customer service representative that assists customers with inquiries, resolves issues, and ensures customer satisfaction.",
+    "active": true
   }
 ]

@@ -7,21 +7,21 @@
     "active": true
   },
   {
-    "name": "Sales Agent",
+    "name": "Sales Agent (Demo)",
     "description": "Analyzes sales data and provides insights",
     "icon": "line-chart",
     "promptTemplate": "You are a sales agent that helps with analyzing sales data, creating sales forecasts, and identifying opportunities.",
     "active": true
   },
   {
-    "name": "Marketing Agent",
+    "name": "Marketing Agent (Demo)",
     "description": "Helps with marketing campaigns and content",
     "icon": "megaphone",
     "promptTemplate": "You are a marketing expert that can help create campaigns, analyze customer data, and optimize marketing strategies.",
     "active": true
   },
   {
-    "name": "Customer Service",
+    "name": "Customer Service (Demo)",
     "description": "Provides customer support and resolves issues",
     "icon": "customer-service-2",
     "promptTemplate": "You are a customer service representative that assists customers with inquiries, resolves issues, and ensures customer satisfaction.",

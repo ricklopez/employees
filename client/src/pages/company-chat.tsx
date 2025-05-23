@@ -862,6 +862,8 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
   const { data: skills = [], isLoading, refetch } = useQuery({
     queryKey: [`/api/agents/${selectedAgentId}/skills`],
     enabled: !!selectedAgentId,
+    staleTime: 0, // Always refetch
+    cacheTime: 0, // Don't cache
   });
 
   console.log('Skills query - selectedAgentId:', selectedAgentId);

@@ -916,7 +916,7 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
       })
     ),
     defaultValues: {
-      name: "",
+      title: "",
       description: "",
       costPerUnit: 0,
       unitLabel: "",
@@ -930,18 +930,18 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
   useEffect(() => {
     if (editingSkill) {
       form.reset({
-        name: editingSkill.name,
+        title: editingSkill.title,
         description: editingSkill.description,
         costPerUnit: parseFloat(editingSkill.costPerUnit?.toString() || "0"),
-        unitLabel: editingSkill.unitLabel,
-        limitUnits: editingSkill.limitUnits,
-        limitInterval: editingSkill.limitInterval,
+        unitLabel: editingSkill.unitLabel || "",
+        limitUnits: editingSkill.limitUnits || 1,
+        limitInterval: editingSkill.limitInterval || "daily",
         status: editingSkill.status,
         playbookUrl: editingSkill.playbookUrl || "",
       });
     } else {
       form.reset({
-        name: "",
+        title: "",
         description: "",
         costPerUnit: 0,
         unitLabel: "",
@@ -954,6 +954,9 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
   }, [editingSkill, form]);
 
   const onSubmit = (data: any) => {
+    console.log('Form submitted with data:', data);
+    console.log('Form errors:', form.formState.errors);
+    
     if (editingSkill) {
       updateSkillMutation.mutate({ id: editingSkill.id, ...data });
     } else {
@@ -1004,7 +1007,7 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="name"
+                    name="title"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Skill Name *</FormLabel>

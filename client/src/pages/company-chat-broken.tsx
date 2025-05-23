@@ -194,7 +194,7 @@ export default function CompanyChat() {
             </Avatar>
             <div>
               <h1 className="font-semibold">{company?.name}</h1>
-              <p className="text-sm text-muted-foreground">AI Assistant Platform</p>
+              <p className="text-sm text-muted-foreground">AI Employee Platform</p>
             </div>
           </div>
           

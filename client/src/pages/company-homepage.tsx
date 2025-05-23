@@ -2,7 +2,13 @@ import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot, MessageSquare, Sparkles, ArrowRight } from "lucide-react";
@@ -42,7 +48,10 @@ export default function CompanyHomepage() {
   const { data: agents = [], isLoading: agentsLoading } = useQuery<Agent[]>({
     queryKey: ["/api/companies", company?.id, "agents"],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/companies/${company!.id}/agents`);
+      const res = await apiRequest(
+        "GET",
+        `/api/companies/${company!.id}/agents`,
+      );
       return res.json();
     },
     enabled: !!company?.id,
@@ -66,7 +75,8 @@ export default function CompanyHomepage() {
           <Bot className="h-24 w-24 mx-auto text-muted-foreground mb-6" />
           <h1 className="text-3xl font-bold mb-4">Company Not Found</h1>
           <p className="text-muted-foreground mb-8">
-            The company "{companySlug}" could not be found. Please check the URL and try again.
+            The company "{companySlug}" could not be found. Please check the URL
+            and try again.
           </p>
           <Button asChild>
             <Link href="/">Go Home</Link>
@@ -93,15 +103,16 @@ export default function CompanyHomepage() {
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   {company.name}
                 </h1>
-                <p className="text-muted-foreground">AI Assistant Platform</p>
+                <p className="text-muted-foreground">AI Employee Platform</p>
               </div>
             </div>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Welcome to your AI-powered workspace. Choose from our specialized assistants to help streamline your business operations.
+              Welcome to your AI-powered workspace. Choose from our specialized
+              assistants to help streamline your business operations.
             </p>
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="h-4 w-4" />
-              <span>Powered by advanced AI technology</span>
+              <span>Powered by Artificial Compute</span>
             </div>
           </div>
         </div>
@@ -112,21 +123,25 @@ export default function CompanyHomepage() {
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold mb-4">Choose Your AI Assistant</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Each assistant is specially trained to help with specific business functions. Click on any assistant to start a conversation.
+            Each assistant is specially trained to help with specific business
+            functions. Click on any assistant to start a conversation.
           </p>
         </div>
 
         {agentsLoading ? (
           <div className="text-center py-12">
             <Bot className="h-16 w-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
-            <p className="text-lg text-muted-foreground">Loading assistants...</p>
+            <p className="text-lg text-muted-foreground">
+              Loading assistants...
+            </p>
           </div>
         ) : agents.length === 0 ? (
           <div className="text-center py-16">
             <Bot className="h-24 w-24 mx-auto text-muted-foreground mb-6" />
             <h3 className="text-2xl font-bold mb-4">No Assistants Available</h3>
             <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              There are currently no AI assistants assigned to this company. Please contact your administrator.
+              There are currently no AI assistants assigned to this company.
+              Please contact your administrator.
             </p>
           </div>
         ) : (
@@ -142,7 +157,10 @@ export default function CompanyHomepage() {
                           {agent.name}
                         </CardTitle>
                         <div className="flex gap-2 mt-2">
-                          <Badge variant={agent.active ? "default" : "secondary"} className="text-xs">
+                          <Badge
+                            variant={agent.active ? "default" : "secondary"}
+                            className="text-xs"
+                          >
                             {agent.active ? "Active" : "Inactive"}
                           </Badge>
                           {agent.isGlobal && (
@@ -159,8 +177,8 @@ export default function CompanyHomepage() {
                     <CardDescription className="text-sm leading-relaxed mb-4">
                       {agent.description}
                     </CardDescription>
-                    <Button 
-                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors" 
+                    <Button
+                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                       variant="outline"
                     >
                       <MessageSquare className="h-4 w-4 mr-2" />
@@ -175,7 +193,9 @@ export default function CompanyHomepage() {
 
         {/* Features Section */}
         <div className="mt-20 text-center">
-          <h3 className="text-2xl font-bold mb-8">Why Choose Our AI Assistants?</h3>
+          <h3 className="text-2xl font-bold mb-8">
+            Why Choose Our AI Assistants?
+          </h3>
           <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto">
             <div className="text-center">
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
@@ -183,7 +203,8 @@ export default function CompanyHomepage() {
               </div>
               <h4 className="font-semibold mb-2">Specialized Knowledge</h4>
               <p className="text-sm text-muted-foreground">
-                Each assistant is trained for specific business functions and industries.
+                Each assistant is trained for specific business functions and
+                industries.
               </p>
             </div>
             <div className="text-center">
@@ -192,7 +213,8 @@ export default function CompanyHomepage() {
               </div>
               <h4 className="font-semibold mb-2">Natural Conversations</h4>
               <p className="text-sm text-muted-foreground">
-                Powered by advanced AI for human-like interactions and responses.
+                Powered by advanced AI for human-like interactions and
+                responses.
               </p>
             </div>
             <div className="text-center">

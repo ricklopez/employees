@@ -107,7 +107,8 @@ export default function CompanyChat() {
       return res.json();
     },
     enabled: !!currentConversation?.id,
-    refetchInterval: isTyping ? 1000 : false, // Auto-refresh when waiting for AI response
+    refetchInterval: isTyping ? 1000 : 2000, // Always refresh every 2 seconds to catch new messages
+    staleTime: 0, // Always consider data stale to force fresh fetches
   });
 
   const sendMessageMutation = useMutation({

@@ -8,7 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, Bot, User, ArrowLeft, MessageSquare, Plus } from "lucide-react";
+import { Send, Bot, User, ArrowLeft, MessageSquare, Plus, ExternalLink, Edit, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 
 type Company = {
@@ -53,6 +56,7 @@ export default function CompanyChat() {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
+  const [isLinksModalOpen, setIsLinksModalOpen] = useState(false);
 
   // Always call ALL hooks at the top level - never conditionally
   const { data: company, isLoading: companyLoading } = useQuery<Company>({
@@ -390,6 +394,7 @@ export default function CompanyChat() {
                     variant="outline" 
                     size="sm"
                     className="border-blue-500 text-blue-500 hover:bg-blue-50"
+                    onClick={() => setIsLinksModalOpen(true)}
                   >
                     Links
                   </Button>
@@ -506,6 +511,309 @@ export default function CompanyChat() {
           </div>
         )}
       </div>
+
+      {/* Links Modal */}
+      <Dialog open={isLinksModalOpen} onOpenChange={setIsLinksModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ExternalLink className="h-5 w-5" />
+              Manage Links
+              {selectedAgent && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  for {selectedAgent.name}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <LinksModalContent 
+            selectedAgentId={selectedAgentId} 
+            onClose={() => setIsLinksModalOpen(false)} 
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Links Modal Content Component
+function LinksModalContent({ selectedAgentId, onClose }: { 
+  selectedAgentId: number | null; 
+  onClose: () => void; 
+}) {
+  const [newLink, setNewLink] = useState({
+    title: "",
+    url: "",
+    description: "",
+    category: "",
+    icon: ""
+  });
+  const [editingLink, setEditingLink] = useState<any>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  // Fetch links for the selected agent
+  const { data: links = [], isLoading, refetch } = useQuery({
+    queryKey: ["/api/agents", selectedAgentId, "links"],
+    queryFn: async () => {
+      if (!selectedAgentId) return [];
+      const res = await apiRequest("GET", `/api/agents/${selectedAgentId}/links`);
+      return res.json();
+    },
+    enabled: !!selectedAgentId,
+  });
+
+  // Create link mutation
+  const createLinkMutation = useMutation({
+    mutationFn: async (linkData: any) => {
+      const res = await apiRequest("POST", `/api/agents/${selectedAgentId}/links`, linkData);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      setNewLink({ title: "", url: "", description: "", category: "", icon: "" });
+      setShowAddForm(false);
+    },
+  });
+
+  // Update link mutation
+  const updateLinkMutation = useMutation({
+    mutationFn: async ({ id, ...linkData }: any) => {
+      const res = await apiRequest("PUT", `/api/links/${id}`, linkData);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      setEditingLink(null);
+    },
+  });
+
+  // Delete link mutation
+  const deleteLinkMutation = useMutation({
+    mutationFn: async (linkId: number) => {
+      await apiRequest("DELETE", `/api/links/${linkId}`);
+    },
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const handleCreateLink = () => {
+    if (newLink.title && newLink.url) {
+      createLinkMutation.mutate({
+        ...newLink,
+        active: true
+      });
+    }
+  };
+
+  const handleUpdateLink = () => {
+    if (editingLink) {
+      updateLinkMutation.mutate(editingLink);
+    }
+  };
+
+  const handleDeleteLink = (linkId: number) => {
+    if (confirm("Are you sure you want to delete this link?")) {
+      deleteLinkMutation.mutate(linkId);
+    }
+  };
+
+  if (!selectedAgentId) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Please select an agent to manage links.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Links List */}
+      <ScrollArea className="h-[400px] pr-4">
+        <div className="space-y-3">
+          {isLoading ? (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground">Loading links...</p>
+            </div>
+          ) : links.length === 0 ? (
+            <div className="text-center py-8">
+              <ExternalLink className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">No links configured for this agent yet.</p>
+              <Button onClick={() => setShowAddForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add First Link
+              </Button>
+            </div>
+          ) : (
+            <>
+              {links.map((link: any) => (
+                <div key={link.id} className="border rounded-lg p-4 space-y-2">
+                  {editingLink?.id === link.id ? (
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="edit-title">Title</Label>
+                        <Input
+                          id="edit-title"
+                          value={editingLink.title}
+                          onChange={(e) => setEditingLink({ ...editingLink, title: e.target.value })}
+                          placeholder="Link title"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-url">URL</Label>
+                        <Input
+                          id="edit-url"
+                          value={editingLink.url}
+                          onChange={(e) => setEditingLink({ ...editingLink, url: e.target.value })}
+                          placeholder="https://example.com"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-description">Description</Label>
+                        <Textarea
+                          id="edit-description"
+                          value={editingLink.description || ""}
+                          onChange={(e) => setEditingLink({ ...editingLink, description: e.target.value })}
+                          placeholder="Brief description of this link"
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-category">Category</Label>
+                        <Input
+                          id="edit-category"
+                          value={editingLink.category || ""}
+                          onChange={(e) => setEditingLink({ ...editingLink, category: e.target.value })}
+                          placeholder="e.g., Documentation, API, Tool"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setEditingLink(null)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={handleUpdateLink} disabled={updateLinkMutation.isPending}>
+                          {updateLinkMutation.isPending ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-medium">{link.title}</h3>
+                            {link.category && (
+                              <Badge variant="secondary" className="text-xs">
+                                {link.category}
+                              </Badge>
+                            )}
+                          </div>
+                          <a 
+                            href={link.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 text-sm break-all"
+                          >
+                            {link.url}
+                          </a>
+                          {link.description && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {link.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 ml-4">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingLink(link)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteLink(link.id)}
+                            disabled={deleteLinkMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              {!showAddForm && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowAddForm(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Link
+                </Button>
+              )}
+            </>
+          )}
+
+          {/* Add New Link Form */}
+          {showAddForm && (
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/50">
+              <h3 className="font-medium">Add New Link</h3>
+              <div>
+                <Label htmlFor="new-title">Title</Label>
+                <Input
+                  id="new-title"
+                  value={newLink.title}
+                  onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
+                  placeholder="Link title"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-url">URL</Label>
+                <Input
+                  id="new-url"
+                  value={newLink.url}
+                  onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                  placeholder="https://example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-description">Description</Label>
+                <Textarea
+                  id="new-description"
+                  value={newLink.description}
+                  onChange={(e) => setNewLink({ ...newLink, description: e.target.value })}
+                  placeholder="Brief description of this link"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-category">Category</Label>
+                <Input
+                  id="new-category"
+                  value={newLink.category}
+                  onChange={(e) => setNewLink({ ...newLink, category: e.target.value })}
+                  placeholder="e.g., Documentation, API, Tool"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowAddForm(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCreateLink} 
+                  disabled={!newLink.title || !newLink.url || createLinkMutation.isPending}
+                >
+                  {createLinkMutation.isPending ? "Adding..." : "Add Link"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

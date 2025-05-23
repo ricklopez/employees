@@ -147,13 +147,35 @@ export default function CompanyChat() {
     setLocation(`/${companySlug}/chat/${agentIdNum}`);
   };
 
-  const handleStartNewConversation = () => {
+  const handleStartNewConversation = async () => {
     if (selectedAgentId && selectedAgent) {
-      setCurrentConversation(null);
-      // This will trigger the conversation query to create a new one
-      queryClient.invalidateQueries({
-        queryKey: ["/api/conversations", selectedAgentId],
-      });
+      try {
+        // Create a new conversation directly
+        const res = await apiRequest("POST", "/api/conversations", {
+          title: `New chat with ${selectedAgent.name}`,
+          agentId: selectedAgentId,
+          userId: 1
+        });
+        const newConversation = await res.json();
+        
+        // Set as current conversation
+        setCurrentConversation(newConversation);
+        
+        // Update the URL to reflect the new conversation
+        setLocation(`/${companySlug}/chat/${selectedAgentId}`);
+        
+        // Refresh conversation list
+        queryClient.invalidateQueries({
+          queryKey: ["/api/conversations", company?.id],
+        });
+        
+        // Refresh messages for the new conversation
+        queryClient.invalidateQueries({
+          queryKey: ["/api/conversations", newConversation.id, "messages"],
+        });
+      } catch (error) {
+        console.error('Failed to create new conversation:', error);
+      }
     }
   };
 

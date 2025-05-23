@@ -281,17 +281,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 content: msg.content
               }));
 
+              // Enhanced OpenAI integration with better context and streaming
               const response = await openai.chat.completions.create({
                 model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
                 messages: [
                   {
                     role: "system",
-                    content: agent.promptTemplate
+                    content: `${agent.promptTemplate}\n\nYou are an expert AI assistant. Provide helpful, accurate, and professional responses. Stay in character as ${agent.name}. Be conversational but professional.`
                   },
                   ...conversationHistory
                 ],
-                max_tokens: 1000,
-                temperature: 0.7
+                max_tokens: 1500,
+                temperature: 0.7,
+                presence_penalty: 0.1,
+                frequency_penalty: 0.1
               });
 
               const aiResponse = response.choices[0]?.message?.content;

@@ -5,6 +5,10 @@ import {
   conversations, 
   messages, 
   transactions,
+  skills,
+  tasks,
+  taskComments,
+  links,
   type User, 
   type InsertUser, 
   type Company,
@@ -19,7 +23,15 @@ import {
   type InsertTransaction,
   companyAgents,
   type CompanyAgent,
-  type InsertCompanyAgent
+  type InsertCompanyAgent,
+  type Skill,
+  type InsertSkill,
+  type Task,
+  type InsertTask,
+  type TaskComment,
+  type InsertTaskComment,
+  type Link,
+  type InsertLink
 } from "@shared/schema";
 import fs from 'fs';
 import path from 'path';

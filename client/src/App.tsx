@@ -10,6 +10,7 @@ import AuthPage from "@/pages/auth-page";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AgentAssignment from "@/pages/agent-assignment";
 import CompanyChat from "@/pages/company-chat";
+import CompanyHomepage from "@/pages/company-homepage";
 import { AgentProvider } from "@/lib/agent-context";
 import { ChatProvider } from "@/lib/chat-context";
 

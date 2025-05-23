@@ -284,6 +284,12 @@ export default function AdminDashboard() {
                           </p>
                         </div>
                         <div className="flex gap-2">
+                          <Link href={`/${company.slug}/chat`} target="_blank">
+                            <Button variant="default" size="sm">
+                              <Bot className="h-4 w-4 mr-2" />
+                              View Company
+                            </Button>
+                          </Link>
                           <Link href={`/admin/companies/${company.id}/agents`}>
                             <Button variant="outline" size="sm">
                               <Settings className="h-4 w-4 mr-2" />

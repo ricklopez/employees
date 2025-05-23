@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, Bot, User, ArrowLeft, MessageSquare, Plus, ExternalLink, Edit, Trash2, Loader2 } from "lucide-react";
+import { Send, Bot, User, ArrowLeft, MessageSquare, Plus, ExternalLink, Edit, Trash2, Loader2, Upload, FileText, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";

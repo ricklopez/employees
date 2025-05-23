@@ -864,6 +864,11 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
     enabled: !!selectedAgentId,
   });
 
+  console.log('Skills query - selectedAgentId:', selectedAgentId);
+  console.log('Skills query - enabled:', !!selectedAgentId);
+  console.log('Skills data:', skills);
+  console.log('Skills loading:', isLoading);
+
   const createSkillMutation = useMutation({
     mutationFn: async (skillData: any) => {
       const response = await apiRequest("POST", `/api/agents/${selectedAgentId}/skills`, skillData);

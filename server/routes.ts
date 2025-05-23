@@ -11,15 +11,13 @@ import {
 } from "@shared/schema";
 import { analyzeTransactions } from "./services/openai";
 import { parseCsvFile } from "./services/csvParser";
-import { requireAuth, requireRole } from "./auth";
 import fs from "fs";
+import { setupAuth, requireAuth, requireRole } from "./auth";
 
 // Define custom Request type with file property added by multer
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
 }
-
-import { setupAuth, requireAuth, requireRole } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication

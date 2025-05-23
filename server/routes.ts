@@ -82,6 +82,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/companies/:id', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const company = await storage.getCompany(id);
+      
+      if (!company) {
+        return res.status(404).json({ message: 'Company not found' });
+      }
+      
+      res.json(company);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/admin/companies/:id/agents', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const agents = await storage.getCompanyAgents(companyId);
+      res.json(agents);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/admin/companies/:id/agents', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const { agentIds } = req.body;
+      
+      if (!agentIds || !Array.isArray(agentIds)) {
+        return res.status(400).json({ message: 'agentIds array is required' });
+      }
+
+      const assignments = [];
+      for (const agentId of agentIds) {
+        const assignment = await storage.assignAgentToCompany(companyId, agentId);
+        assignments.push(assignment);
+      }
+      
+      res.status(201).json(assignments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/admin/companies/:companyId/agents/:agentId', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const agentId = parseInt(req.params.agentId);
+      
+      await storage.removeAgentFromCompany(companyId, agentId);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // API routes
   // Get all agents
   app.get('/api/agents', async (req: Request, res: Response) => {

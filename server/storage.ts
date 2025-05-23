@@ -16,7 +16,10 @@ import {
   type Message,
   type InsertMessage,
   type Transaction,
-  type InsertTransaction
+  type InsertTransaction,
+  companyAgents,
+  type CompanyAgent,
+  type InsertCompanyAgent
 } from "@shared/schema";
 import fs from 'fs';
 import path from 'path';
@@ -41,6 +44,7 @@ export interface IStorage {
   updateAgent(id: number, agent: Partial<InsertAgent>): Promise<Agent | undefined>;
   assignAgentToCompany(companyId: number, agentId: number): Promise<CompanyAgent>;
   getCompanyAgents(companyId: number): Promise<Agent[]>;
+  removeAgentFromCompany(companyId: number, agentId: number): Promise<void>;
   
   // Conversation methods
   getConversations(userId?: number): Promise<Conversation[]>;
@@ -346,6 +350,17 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(agents.isGlobal, true), eq(agents.active, true)));
 
     return [...result.map(r => r.agent), ...globalAgents];
+  }
+
+  async removeAgentFromCompany(companyId: number, agentId: number): Promise<void> {
+    await db
+      .delete(companyAgents)
+      .where(
+        and(
+          eq(companyAgents.companyId, companyId),
+          eq(companyAgents.agentId, agentId)
+        )
+      );
   }
 
   // Conversation methods

@@ -970,7 +970,7 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
   };
 
   const handleDelete = (skill: Skill) => {
-    if (confirm(`Are you sure you want to delete "${skill.name}"?`)) {
+    if (confirm(`Are you sure you want to delete "${skill.title}"?`)) {
       deleteSkillMutation.mutate(skill.id);
     }
   };
@@ -1204,7 +1204,7 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-medium">{skill.name}</h4>
+                      <h4 className="font-medium">{skill.title}</h4>
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         skill.status === 'active' ? 'bg-green-100 text-green-700' :
                         skill.status === 'inactive' ? 'bg-gray-100 text-gray-700' :

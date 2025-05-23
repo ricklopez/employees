@@ -437,7 +437,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/links/:id', requireAuth, async (req: Request, res: Response) => {
     try {
       const linkId = parseInt(req.params.id);
-      const link = await storage.updateLink(linkId, req.body);
+      // Remove createdAt from updates to avoid timestamp issues
+      const { createdAt, ...updateData } = req.body;
+      const link = await storage.updateLink(linkId, updateData);
       if (!link) {
         return res.status(404).json({ error: 'Link not found' });
       }

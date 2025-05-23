@@ -107,6 +107,7 @@ export default function CompanyChat() {
       return res.json();
     },
     enabled: !!currentConversation?.id,
+    refetchInterval: isTyping ? 1000 : false, // Auto-refresh when waiting for AI response
   });
 
   const sendMessageMutation = useMutation({
@@ -129,16 +130,8 @@ export default function CompanyChat() {
         queryKey: ["/api/conversations", currentConversation?.id, "messages"],
       });
       
-      // Set up continuous polling for AI response (like the original working version)
-      const pollForResponse = setInterval(() => {
-        queryClient.invalidateQueries({
-          queryKey: ["/api/conversations", currentConversation?.id, "messages"],
-        });
-      }, 1000);
-      
-      // Stop polling and typing indicator after 30 seconds
+      // Stop typing indicator after 30 seconds (backup)
       setTimeout(() => {
-        clearInterval(pollForResponse);
         setIsTyping(false);
         queryClient.invalidateQueries({
           queryKey: ["/api/conversations", company?.id],
@@ -149,6 +142,19 @@ export default function CompanyChat() {
       setIsTyping(false);
     },
   });
+
+  // Detect when AI response arrives and stop typing indicator
+  useEffect(() => {
+    if (messages.length > 0 && isTyping) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage?.role === 'assistant') {
+        setIsTyping(false);
+        queryClient.invalidateQueries({
+          queryKey: ["/api/conversations", company?.id],
+        });
+      }
+    }
+  }, [messages, isTyping, company?.id]);
 
   useEffect(() => {
     if (fetchedConversation) {

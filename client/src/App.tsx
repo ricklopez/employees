@@ -24,8 +24,11 @@ function Router() {
       <Route path="/admin/companies/:companyId/agents">
         {(params) => <AgentAssignment companyId={params.companyId} />}
       </Route>
-      <Route path="/:companySlug/chat/:agentId?">
+      <Route path="/:companySlug/chat/:agentId">
         {(params) => <CompanyChat />}
+      </Route>
+      <Route path="/:companySlug/chat">
+        {(params) => <CompanyHomepage />}
       </Route>
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />

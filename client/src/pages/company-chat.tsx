@@ -8,11 +8,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, Bot, User, ArrowLeft, MessageSquare, Plus, ExternalLink, Edit, Trash2 } from "lucide-react";
+import { Send, Bot, User, ArrowLeft, MessageSquare, Plus, ExternalLink, Edit, Trash2, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertSkillSchema, Skill } from "@shared/schema";
+import { z } from "zod";
 
 type Company = {
   id: number;

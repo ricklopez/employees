@@ -122,13 +122,38 @@ export default function CompanyChat() {
     },
     onSuccess: () => {
       setMessage("");
-      setIsTyping(false);
-      queryClient.invalidateQueries({
-        queryKey: ["/api/conversations", currentConversation?.id, "messages"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/conversations", company?.id],
-      });
+      
+      // Poll for AI response
+      const pollForResponse = () => {
+        queryClient.invalidateQueries({
+          queryKey: ["/api/conversations", currentConversation?.id, "messages"],
+        });
+        
+        // Check if AI response arrived
+        setTimeout(() => {
+          const currentMessages = queryClient.getQueryData(["/api/conversations", currentConversation?.id, "messages"]) as Message[];
+          if (currentMessages && currentMessages.length > 0) {
+            const lastMessage = currentMessages[currentMessages.length - 1];
+            if (lastMessage.role === 'assistant') {
+              setIsTyping(false);
+              queryClient.invalidateQueries({
+                queryKey: ["/api/conversations", company?.id],
+              });
+              return;
+            }
+          }
+          
+          // Continue polling if no AI response yet
+          if (currentMessages && currentMessages.length > 0) {
+            setTimeout(pollForResponse, 1000);
+          } else {
+            setIsTyping(false);
+          }
+        }, 500);
+      };
+      
+      // Start polling after a brief delay
+      setTimeout(pollForResponse, 1000);
     },
     onError: () => {
       setIsTyping(false);

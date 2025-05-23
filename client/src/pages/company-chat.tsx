@@ -56,6 +56,7 @@ type Conversation = {
 export default function CompanyChat() {
   const params = useParams();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const companySlug = params.companySlug;
   const agentId = params.agentId ? parseInt(params.agentId) : null;
   const [message, setMessage] = useState("");

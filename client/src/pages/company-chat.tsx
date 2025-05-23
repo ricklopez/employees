@@ -124,58 +124,29 @@ export default function CompanyChat() {
     onSuccess: () => {
       setMessage("");
       
-      // Clear any existing polling
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-      
       // Immediately refresh to show user message
       queryClient.invalidateQueries({
         queryKey: ["/api/conversations", currentConversation?.id, "messages"],
       });
       
-      // Track initial message count
-      const initialMessages = queryClient.getQueryData(["/api/conversations", currentConversation?.id, "messages"]) as Message[] || [];
-      const initialCount = initialMessages.length;
-      
-      // Set up aggressive polling to catch AI response
-      const newPollInterval = setInterval(() => {
+      // Set up continuous polling for AI response (like the original working version)
+      const pollForResponse = setInterval(() => {
         queryClient.invalidateQueries({
           queryKey: ["/api/conversations", currentConversation?.id, "messages"],
         });
-        
-        // Check if AI response arrived
-        setTimeout(() => {
-          const currentMessages = queryClient.getQueryData(["/api/conversations", currentConversation?.id, "messages"]) as Message[] || [];
-          if (currentMessages.length > initialCount + 1) {
-            const lastMessage = currentMessages[currentMessages.length - 1];
-            if (lastMessage && lastMessage.role === 'assistant') {
-              clearInterval(newPollInterval);
-              setIsTyping(false);
-              setPollInterval(null);
-              queryClient.invalidateQueries({
-                queryKey: ["/api/conversations", company?.id],
-              });
-            }
-          }
-        }, 100);
-      }, 500);
+      }, 1000);
       
-      setPollInterval(newPollInterval);
-      
-      // Backup: Stop polling after 45 seconds
+      // Stop polling and typing indicator after 30 seconds
       setTimeout(() => {
-        clearInterval(newPollInterval);
+        clearInterval(pollForResponse);
         setIsTyping(false);
-        setPollInterval(null);
-      }, 45000);
+        queryClient.invalidateQueries({
+          queryKey: ["/api/conversations", company?.id],
+        });
+      }, 30000);
     },
     onError: () => {
       setIsTyping(false);
-      if (pollInterval) {
-        clearInterval(pollInterval);
-        setPollInterval(null);
-      }
     },
   });
 

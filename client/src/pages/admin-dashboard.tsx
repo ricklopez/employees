@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Users, Bot, Plus, Settings } from "lucide-react";
+import { Link } from "wouter";
 
 type CompanyType = {
   id: number;
@@ -257,10 +258,12 @@ export default function AdminDashboard() {
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Settings className="h-4 w-4 mr-2" />
-                            Manage Agents
-                          </Button>
+                          <Link href={`/admin/companies/${company.id}/agents`}>
+                            <Button variant="outline" size="sm">
+                              <Settings className="h-4 w-4 mr-2" />
+                              Manage Agents
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     ))}

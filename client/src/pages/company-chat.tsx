@@ -956,11 +956,20 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
   const onSubmit = (data: any) => {
     console.log('Form submitted with data:', data);
     console.log('Form errors:', form.formState.errors);
+    console.log('Selected agent ID:', selectedAgentId);
+    
+    // Add agentId to the data
+    const skillData = {
+      ...data,
+      agentId: selectedAgentId
+    };
+    
+    console.log('Submitting skill data:', skillData);
     
     if (editingSkill) {
-      updateSkillMutation.mutate({ id: editingSkill.id, ...data });
+      updateSkillMutation.mutate({ id: editingSkill.id, ...skillData });
     } else {
-      createSkillMutation.mutate(data);
+      createSkillMutation.mutate(skillData);
     }
   };
 

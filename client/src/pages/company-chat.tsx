@@ -381,6 +381,7 @@ export default function CompanyChat() {
                     variant="outline" 
                     size="sm"
                     className="border-pink-500 text-pink-500 hover:bg-pink-50"
+                    onClick={() => setIsSkillsModalOpen(true)}
                   >
                     Skills
                   </Button>
@@ -530,6 +531,27 @@ export default function CompanyChat() {
           <LinksModalContent 
             selectedAgentId={selectedAgentId} 
             onClose={() => setIsLinksModalOpen(false)} 
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Skills Modal */}
+      <Dialog open={isSkillsModalOpen} onOpenChange={setIsSkillsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="h-5 w-5 bg-pink-500 rounded"></div>
+              Manage Skills
+              {selectedAgent && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  for {selectedAgent.name}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <SkillsModalContent 
+            selectedAgentId={selectedAgentId} 
+            onClose={() => setIsSkillsModalOpen(false)} 
           />
         </DialogContent>
       </Dialog>
@@ -817,6 +839,409 @@ function LinksModalContent({ selectedAgentId, onClose }: {
           )}
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+// Skills Modal Content Component
+function SkillsModalContent({ selectedAgentId, onClose }: { 
+  selectedAgentId: number | null; 
+  onClose: () => void;
+}) {
+  const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const { toast } = useToast();
+
+  const { data: skills = [], isLoading, refetch } = useQuery({
+    queryKey: ["/api/agents", selectedAgentId, "skills"],
+    enabled: !!selectedAgentId,
+  });
+
+  const createSkillMutation = useMutation({
+    mutationFn: async (skillData: any) => {
+      const response = await apiRequest("POST", `/api/agents/${selectedAgentId}/skills`, skillData);
+      return await response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      setIsFormOpen(false);
+      toast({ title: "Success", description: "Skill created successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateSkillMutation = useMutation({
+    mutationFn: async ({ id, ...skillData }: any) => {
+      const response = await apiRequest("PUT", `/api/skills/${id}`, skillData);
+      return await response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      setEditingSkill(null);
+      setIsFormOpen(false);
+      toast({ title: "Success", description: "Skill updated successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteSkillMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/skills/${id}`);
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: "Success", description: "Skill deleted successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const form = useForm({
+    resolver: zodResolver(
+      insertSkillSchema.extend({
+        costPerUnit: z.number().min(0, "Cost must be positive"),
+        limitUnits: z.number().min(1, "Limit must be at least 1"),
+      })
+    ),
+    defaultValues: {
+      name: "",
+      description: "",
+      costPerUnit: 0,
+      unitLabel: "",
+      limitUnits: 1,
+      limitInterval: "daily",
+      status: "active",
+      playbookUrl: "",
+    },
+  });
+
+  useEffect(() => {
+    if (editingSkill) {
+      form.reset({
+        name: editingSkill.name,
+        description: editingSkill.description,
+        costPerUnit: parseFloat(editingSkill.costPerUnit?.toString() || "0"),
+        unitLabel: editingSkill.unitLabel,
+        limitUnits: editingSkill.limitUnits,
+        limitInterval: editingSkill.limitInterval,
+        status: editingSkill.status,
+        playbookUrl: editingSkill.playbookUrl || "",
+      });
+    } else {
+      form.reset({
+        name: "",
+        description: "",
+        costPerUnit: 0,
+        unitLabel: "",
+        limitUnits: 1,
+        limitInterval: "daily",
+        status: "active",
+        playbookUrl: "",
+      });
+    }
+  }, [editingSkill, form]);
+
+  const onSubmit = (data: any) => {
+    if (editingSkill) {
+      updateSkillMutation.mutate({ id: editingSkill.id, ...data });
+    } else {
+      createSkillMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (skill: Skill) => {
+    setEditingSkill(skill);
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = (skill: Skill) => {
+    if (confirm(`Are you sure you want to delete "${skill.name}"?`)) {
+      deleteSkillMutation.mutate(skill.id);
+    }
+  };
+
+  if (!selectedAgentId) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <p className="text-muted-foreground">Please select an agent first</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-[60vh]">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Skills Management</h3>
+        <Button 
+          onClick={() => setIsFormOpen(true)}
+          className="bg-pink-600 hover:bg-pink-700"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Skill
+        </Button>
+      </div>
+
+      {isFormOpen && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>{editingSkill ? "Edit Skill" : "Create New Skill"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Skill Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Document Analysis" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                            <SelectItem value="deprecated">Deprecated</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description *</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Describe what this skill does..."
+                          rows={3}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="costPerUnit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cost Per Unit</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="unitLabel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unit Label</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., per page, per request" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="limitUnits"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Usage Limit</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            min="1"
+                            placeholder="100"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="limitInterval"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Limit Interval</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select interval" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="hourly">Hourly</SelectItem>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="playbookUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Playbook URL</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="url"
+                            placeholder="https://docs.example.com/playbook"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => {
+                      setIsFormOpen(false);
+                      setEditingSkill(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={createSkillMutation.isPending || updateSkillMutation.isPending}
+                    className="bg-pink-600 hover:bg-pink-700"
+                  >
+                    {editingSkill ? "Update Skill" : "Create Skill"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : skills.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No skills found for this agent.</p>
+            <p className="text-sm">Click "Add Skill" to create the first one.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {skills.map((skill: Skill) => (
+              <Card key={skill.id} className="p-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-medium">{skill.name}</h4>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        skill.status === 'active' ? 'bg-green-100 text-green-700' :
+                        skill.status === 'inactive' ? 'bg-gray-100 text-gray-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {skill.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{skill.description}</p>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>Cost: ${skill.costPerUnit} {skill.unitLabel}</span>
+                      <span>Limit: {skill.limitUnits} {skill.limitInterval}</span>
+                      {skill.playbookUrl && (
+                        <a 
+                          href={skill.playbookUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          📖 Playbook
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(skill)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(skill)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -911,8 +911,8 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
   const form = useForm({
     resolver: zodResolver(
       insertSkillSchema.extend({
-        costPerUnit: z.number().min(0, "Cost must be positive"),
-        limitUnits: z.number().min(1, "Limit must be at least 1"),
+        costPerUnit: z.coerce.number().min(0, "Cost must be positive"),
+        limitUnits: z.coerce.number().min(1, "Limit must be at least 1"),
       })
     ),
     defaultValues: {

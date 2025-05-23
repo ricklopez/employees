@@ -179,6 +179,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get company by slug for public access
+  app.get('/api/companies/slug/:slug', async (req: Request, res: Response) => {
+    try {
+      const slug = req.params.slug;
+      const company = await storage.getCompanyBySlug(slug);
+      
+      if (!company) {
+        return res.status(404).json({ message: 'Company not found' });
+      }
+      
+      res.json(company);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get company agents for public access
+  app.get('/api/companies/:id/agents', async (req: Request, res: Response) => {
+    try {
+      const companyId = parseInt(req.params.id);
+      const agents = await storage.getCompanyAgents(companyId);
+      res.json(agents);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get conversations
   app.get('/api/conversations', async (req: Request, res: Response) => {
     try {
@@ -223,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a message
+  // Create a message with AI response
   app.post('/api/messages', async (req: Request, res: Response) => {
     try {
       const validateResult = insertMessageSchema.safeParse(req.body);
@@ -231,9 +258,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!validateResult.success) {
         return res.status(400).json({ message: 'Invalid message data', errors: validateResult.error.errors });
       }
+
+      // Create user message
+      const userMessage = await storage.createMessage(validateResult.data);
+
+      // If it's a user message, generate AI response
+      if (validateResult.data.role === 'user') {
+        // Get conversation details to find the agent
+        const conversation = await storage.getConversation(validateResult.data.conversationId);
+        if (conversation && conversation.agentId) {
+          // Get agent details
+          const agent = await storage.getAgent(conversation.agentId);
+          if (agent) {
+            try {
+              const OpenAI = (await import('openai')).default;
+              const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+              // Get conversation history
+              const messages = await storage.getMessages(validateResult.data.conversationId);
+              const conversationHistory = messages.map(msg => ({
+                role: msg.role as 'user' | 'assistant',
+                content: msg.content
+              }));
+
+              const response = await openai.chat.completions.create({
+                model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+                messages: [
+                  {
+                    role: "system",
+                    content: agent.promptTemplate
+                  },
+                  ...conversationHistory
+                ],
+                max_tokens: 1000,
+                temperature: 0.7
+              });
+
+              const aiResponse = response.choices[0]?.message?.content;
+              if (aiResponse) {
+                // Create AI response message
+                await storage.createMessage({
+                  content: aiResponse,
+                  conversationId: validateResult.data.conversationId,
+                  role: 'assistant'
+                });
+              }
+            } catch (aiError) {
+              console.error('AI response error:', aiError);
+              // Create fallback message if AI fails
+              await storage.createMessage({
+                content: `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`,
+                conversationId: validateResult.data.conversationId,
+                role: 'assistant'
+              });
+            }
+          }
+        }
+      }
       
-      const message = await storage.createMessage(validateResult.data);
-      res.status(201).json(message);
+      res.status(201).json(userMessage);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

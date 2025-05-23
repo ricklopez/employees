@@ -158,6 +158,111 @@ export const transactionSummarySchema = z.object({
 
 export type TransactionSummary = z.infer<typeof transactionSummarySchema>;
 
+// Skills table - templates and functions this agent can perform
+export const skills = pgTable("skills", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").references(() => agents.id).notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  template: text("template"), // Task template for this skill
+  functionName: text("function_name"), // Function this skill can call
+  parameters: text("parameters"), // JSON string of parameters
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdByUserId: integer("created_by_user_id").references(() => users.id),
+});
+
+export const insertSkillSchema = createInsertSchema(skills).pick({
+  agentId: true,
+  title: true,
+  description: true,
+  template: true,
+  functionName: true,
+  parameters: true,
+  active: true,
+  createdByUserId: true,
+});
+
+export type InsertSkill = z.infer<typeof insertSkillSchema>;
+export type Skill = typeof skills.$inferSelect;
+
+// Tasks table - completed function runs and task instances
+export const tasks = pgTable("tasks", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").references(() => agents.id).notNull(),
+  skillId: integer("skill_id").references(() => skills.id),
+  conversationId: integer("conversation_id").references(() => conversations.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status", { enum: ["pending", "in_progress", "completed", "failed"] }).default("pending"),
+  result: text("result"), // JSON string of function execution result
+  assignedToUserId: integer("assigned_to_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdByUserId: integer("created_by_user_id").references(() => users.id),
+});
+
+export const insertTaskSchema = createInsertSchema(tasks).pick({
+  agentId: true,
+  skillId: true,
+  conversationId: true,
+  title: true,
+  description: true,
+  status: true,
+  result: true,
+  assignedToUserId: true,
+  createdByUserId: true,
+});
+
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type Task = typeof tasks.$inferSelect;
+
+// Task Comments table - for users and members to comment on tasks
+export const taskComments = pgTable("task_comments", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").references(() => tasks.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTaskCommentSchema = createInsertSchema(taskComments).pick({
+  taskId: true,
+  userId: true,
+  content: true,
+});
+
+export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
+export type TaskComment = typeof taskComments.$inferSelect;
+
+// Links table - external tools specific to this agent
+export const links = pgTable("links", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").references(() => agents.id).notNull(),
+  title: text("title").notNull(),
+  url: text("url").notNull(),
+  description: text("description"),
+  category: text("category"), // e.g., "dashboard", "analytics", "documentation"
+  icon: text("icon"), // Icon identifier
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdByUserId: integer("created_by_user_id").references(() => users.id),
+});
+
+export const insertLinkSchema = createInsertSchema(links).pick({
+  agentId: true,
+  title: true,
+  url: true,
+  description: true,
+  category: true,
+  icon: true,
+  active: true,
+  createdByUserId: true,
+});
+
+export type InsertLink = z.infer<typeof insertLinkSchema>;
+export type Link = typeof links.$inferSelect;
+
 // Database Relations
 export const companiesRelations = relations(companies, ({ many }) => ({
   users: many(users),
@@ -180,6 +285,9 @@ export const agentsRelations = relations(agents, ({ one, many }) => ({
   }),
   companyAgents: many(companyAgents),
   conversations: many(conversations),
+  skills: many(skills),
+  tasks: many(tasks),
+  links: many(links),
 }));
 
 export const companyAgentsRelations = relations(companyAgents, ({ one }) => ({
@@ -217,5 +325,63 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   conversation: one(conversations, {
     fields: [transactions.conversationId],
     references: [conversations.id],
+  }),
+}));
+
+export const skillsRelations = relations(skills, ({ one, many }) => ({
+  agent: one(agents, {
+    fields: [skills.agentId],
+    references: [agents.id],
+  }),
+  createdBy: one(users, {
+    fields: [skills.createdByUserId],
+    references: [users.id],
+  }),
+  tasks: many(tasks),
+}));
+
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  agent: one(agents, {
+    fields: [tasks.agentId],
+    references: [agents.id],
+  }),
+  skill: one(skills, {
+    fields: [tasks.skillId],
+    references: [skills.id],
+  }),
+  conversation: one(conversations, {
+    fields: [tasks.conversationId],
+    references: [conversations.id],
+  }),
+  assignedTo: one(users, {
+    fields: [tasks.assignedToUserId],
+    references: [users.id],
+  }),
+  createdBy: one(users, {
+    fields: [tasks.createdByUserId],
+    references: [users.id],
+  }),
+  comments: many(taskComments),
+}));
+
+export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskComments.taskId],
+    references: [tasks.id],
+  }),
+  user: one(users, {
+    fields: [taskComments.userId],
+    references: [users.id],
+  }),
+}));
+
+export const linksRelations = relations(links, ({ one }) => ({
+  agent: one(agents, {
+    fields: [links.agentId],
+    references: [agents.id],
+  }),
+  createdBy: one(users, {
+    fields: [links.createdByUserId],
+    references: [users.id],
   }),
 }));

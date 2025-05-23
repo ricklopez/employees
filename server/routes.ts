@@ -18,7 +18,11 @@ interface MulterRequest extends Request {
   file?: Express.Multer.File;
 }
 
+import { setupAuth, requireAuth, requireRole } from "./auth";
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
   // Configure multer for file upload
   // Ensure uploads directory exists
   const uploadDir = path.join(process.cwd(), 'uploads');

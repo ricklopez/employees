@@ -22,13 +22,22 @@ export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
+  // Company methods
+  getCompany(id: number): Promise<Company | undefined>;
+  getCompanyBySlug(slug: string): Promise<Company | undefined>;
+  createCompany(company: InsertCompany): Promise<Company>;
+  getCompanies(): Promise<Company[]>;
+  
   // Agent methods
-  getAgents(): Promise<Agent[]>;
+  getAgents(companyId?: number): Promise<Agent[]>;
   getAgent(id: number): Promise<Agent | undefined>;
   createAgent(agent: InsertAgent): Promise<Agent>;
   updateAgent(id: number, agent: Partial<InsertAgent>): Promise<Agent | undefined>;
+  assignAgentToCompany(companyId: number, agentId: number): Promise<CompanyAgent>;
+  getCompanyAgents(companyId: number): Promise<Agent[]>;
   
   // Conversation methods
   getConversations(userId?: number): Promise<Conversation[]>;
@@ -44,6 +53,9 @@ export interface IStorage {
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   createTransactions(transactions: InsertTransaction[]): Promise<Transaction[]>;
   getTransactionSummary(conversationId: number): Promise<{ category: string; total: number; count: number; }[]>;
+
+  // Session store for authentication
+  sessionStore: any;
 }
 
 export class MemStorage implements IStorage {
@@ -226,4 +238,174 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
+
+const PostgresSessionStore = connectPg(session);
+
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.SessionStore;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
+  }
+
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  // Company methods
+  async getCompany(id: number): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.id, id));
+    return company || undefined;
+  }
+
+  async getCompanyBySlug(slug: string): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.slug, slug));
+    return company || undefined;
+  }
+
+  async createCompany(insertCompany: InsertCompany): Promise<Company> {
+    const [company] = await db.insert(companies).values(insertCompany).returning();
+    return company;
+  }
+
+  async getCompanies(): Promise<Company[]> {
+    return await db.select().from(companies);
+  }
+
+  // Agent methods
+  async getAgents(companyId?: number): Promise<Agent[]> {
+    if (companyId) {
+      return await this.getCompanyAgents(companyId);
+    }
+    // Return all global agents if no company specified
+    return await db.select().from(agents).where(eq(agents.isGlobal, true));
+  }
+
+  async getAgent(id: number): Promise<Agent | undefined> {
+    const [agent] = await db.select().from(agents).where(eq(agents.id, id));
+    return agent || undefined;
+  }
+
+  async createAgent(insertAgent: InsertAgent): Promise<Agent> {
+    const [agent] = await db.insert(agents).values(insertAgent).returning();
+    return agent;
+  }
+
+  async updateAgent(id: number, agentUpdate: Partial<InsertAgent>): Promise<Agent | undefined> {
+    const [agent] = await db.update(agents).set(agentUpdate).where(eq(agents.id, id)).returning();
+    return agent || undefined;
+  }
+
+  async assignAgentToCompany(companyId: number, agentId: number): Promise<CompanyAgent> {
+    const [assignment] = await db.insert(companyAgents).values({ companyId, agentId }).returning();
+    return assignment;
+  }
+
+  async getCompanyAgents(companyId: number): Promise<Agent[]> {
+    const result = await db
+      .select({ agent: agents })
+      .from(companyAgents)
+      .innerJoin(agents, eq(companyAgents.agentId, agents.id))
+      .where(and(
+        eq(companyAgents.companyId, companyId),
+        eq(agents.active, true)
+      ));
+    
+    // Also include global agents
+    const globalAgents = await db
+      .select()
+      .from(agents)
+      .where(and(eq(agents.isGlobal, true), eq(agents.active, true)));
+
+    return [...result.map(r => r.agent), ...globalAgents];
+  }
+
+  // Conversation methods
+  async getConversations(userId?: number): Promise<Conversation[]> {
+    if (userId) {
+      return await db.select().from(conversations).where(eq(conversations.userId, userId));
+    }
+    return await db.select().from(conversations);
+  }
+
+  async getConversation(id: number): Promise<Conversation | undefined> {
+    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
+    return conversation || undefined;
+  }
+
+  async createConversation(insertConversation: InsertConversation): Promise<Conversation> {
+    const [conversation] = await db.insert(conversations).values(insertConversation).returning();
+    return conversation;
+  }
+
+  // Message methods
+  async getMessages(conversationId: number): Promise<Message[]> {
+    return await db.select().from(messages).where(eq(messages.conversationId, conversationId));
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    const [message] = await db.insert(messages).values(insertMessage).returning();
+    return message;
+  }
+
+  // Transaction methods
+  async getTransactions(conversationId: number): Promise<Transaction[]> {
+    return await db.select().from(transactions).where(eq(transactions.conversationId, conversationId));
+  }
+
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    const [transaction] = await db.insert(transactions).values(insertTransaction).returning();
+    return transaction;
+  }
+
+  async createTransactions(insertTransactions: InsertTransaction[]): Promise<Transaction[]> {
+    return await db.insert(transactions).values(insertTransactions).returning();
+  }
+
+  async getTransactionSummary(conversationId: number): Promise<{ category: string; total: number; count: number; }[]> {
+    const transactionList = await this.getTransactions(conversationId);
+    const summaryMap = new Map<string, { total: number; count: number }>();
+
+    for (const transaction of transactionList) {
+      const amount = parseFloat(transaction.amount.replace(/[^0-9.-]/g, ''));
+      const existing = summaryMap.get(transaction.category) || { total: 0, count: 0 };
+      summaryMap.set(transaction.category, {
+        total: existing.total + amount,
+        count: existing.count + 1,
+      });
+    }
+
+    return Array.from(summaryMap.entries()).map(([category, { total, count }]) => ({
+      category,
+      total,
+      count,
+    }));
+  }
+}
+
+export const storage = new DatabaseStorage();

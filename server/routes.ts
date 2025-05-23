@@ -167,6 +167,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Initialize default agents with OpenAI integration
+  app.post('/api/admin/agents/initialize', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+    try {
+      const { initializeDefaultAgents } = await import('./services/agentCreator');
+      await initializeDefaultAgents(req.user!.id);
+      res.json({ message: 'Default agents initialized successfully' });
+    } catch (error: any) {
+      console.error('Error initializing agents:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get conversations
   app.get('/api/conversations', async (req: Request, res: Response) => {
     try {

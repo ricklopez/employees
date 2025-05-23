@@ -85,6 +85,32 @@ export default function AdminDashboard() {
     },
   });
 
+  // Initialize agents mutation
+  const initializeAgentsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/agents/initialize");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
+      toast({
+        title: "AI Agents Created!",
+        description: "Professional AI agents have been successfully created with OpenAI integration.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create agents",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const initializeAgents = () => {
+    initializeAgentsMutation.mutate();
+  };
+
   const handleCreateCompany = (e: React.FormEvent) => {
     e.preventDefault();
     if (newCompany.name && newCompany.slug) {
@@ -276,36 +302,54 @@ export default function AdminDashboard() {
           <TabsContent value="agents" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>AI Agents</CardTitle>
-                <CardDescription>
-                  Manage AI agents available across the platform
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>AI Agents</CardTitle>
+                    <CardDescription>
+                      Manage AI agents available across the platform
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={initializeAgents}
+                    disabled={initializeAgentsMutation.isPending}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                  >
+                    <Bot className="h-4 w-4 mr-2" />
+                    {initializeAgentsMutation.isPending ? 'Creating...' : 'Create AI Agents'}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {agentsLoading ? (
                   <div className="text-center py-8">Loading agents...</div>
+                ) : agents.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Bot className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                    <h4 className="text-lg font-medium mb-2">No AI Agents Yet</h4>
+                    <p className="text-muted-foreground mb-6">
+                      Create professional AI agents powered by OpenAI to assign to your companies
+                    </p>
+                  </div>
                 ) : (
-                  <div className="grid gap-4">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {agents.map((agent) => (
-                      <div key={agent.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mr-3">
-                            <i className={`ri-${agent.icon}-line text-primary`}></i>
+                      <div key={agent.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start gap-3">
+                          <div className="text-2xl">{agent.icon}</div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{agent.name}</h4>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {agent.description}
+                            </p>
+                            <div className="flex items-center gap-2 mt-3">
+                              <Badge variant={agent.active ? "default" : "secondary"}>
+                                {agent.active ? "Active" : "Inactive"}
+                              </Badge>
+                              {agent.isGlobal && (
+                                <Badge variant="outline">Global</Badge>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-semibold">{agent.name}</h3>
-                            <p className="text-sm text-muted-foreground">{agent.description}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {agent.isGlobal && (
-                            <Badge variant="secondary">Global</Badge>
-                          )}
-                          {agent.active ? (
-                            <Badge variant="default">Active</Badge>
-                          ) : (
-                            <Badge variant="destructive">Inactive</Badge>
-                          )}
                         </div>
                       </div>
                     ))}

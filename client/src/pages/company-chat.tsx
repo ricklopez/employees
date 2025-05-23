@@ -860,7 +860,7 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
   const { toast } = useToast();
 
   const { data: skills = [], isLoading, refetch } = useQuery({
-    queryKey: ["/api/agents", selectedAgentId, "skills"],
+    queryKey: [`/api/agents/${selectedAgentId}/skills`],
     enabled: !!selectedAgentId,
   });
 

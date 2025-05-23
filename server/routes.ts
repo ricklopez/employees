@@ -406,6 +406,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Links API routes
+  app.get('/api/agents/:agentId/links', async (req: Request, res: Response) => {
+    try {
+      const agentId = parseInt(req.params.agentId);
+      const links = await storage.getLinks(agentId);
+      res.json(links);
+    } catch (error) {
+      console.error('Error fetching links:', error);
+      res.status(500).json({ error: 'Failed to fetch links' });
+    }
+  });
+
+  app.post('/api/agents/:agentId/links', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const agentId = parseInt(req.params.agentId);
+      const linkData = {
+        ...req.body,
+        agentId,
+        createdByUserId: req.user?.id
+      };
+      const link = await storage.createLink(linkData);
+      res.status(201).json(link);
+    } catch (error) {
+      console.error('Error creating link:', error);
+      res.status(500).json({ error: 'Failed to create link' });
+    }
+  });
+
+  app.put('/api/links/:id', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const linkId = parseInt(req.params.id);
+      const link = await storage.updateLink(linkId, req.body);
+      if (!link) {
+        return res.status(404).json({ error: 'Link not found' });
+      }
+      res.json(link);
+    } catch (error) {
+      console.error('Error updating link:', error);
+      res.status(500).json({ error: 'Failed to update link' });
+    }
+  });
+
+  app.delete('/api/links/:id', requireAuth, requireRole('admin', 'company_manager'), async (req: Request, res: Response) => {
+    try {
+      const linkId = parseInt(req.params.id);
+      await storage.deleteLink(linkId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting link:', error);
+      res.status(500).json({ error: 'Failed to delete link' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

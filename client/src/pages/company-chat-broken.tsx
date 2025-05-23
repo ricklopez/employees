@@ -52,7 +52,7 @@ export default function CompanyChat() {
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(agentId);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
 
-  // Always call ALL hooks at the top level - never conditionally
+  // Fetch company by slug
   const { data: company, isLoading: companyLoading } = useQuery<Company>({
     queryKey: ["/api/companies/slug", companySlug],
     queryFn: async () => {
@@ -62,6 +62,7 @@ export default function CompanyChat() {
     enabled: !!companySlug,
   });
 
+  // Fetch company agents
   const { data: agents = [], isLoading: agentsLoading } = useQuery<Agent[]>({
     queryKey: ["/api/companies", company?.id, "agents"],
     queryFn: async () => {
@@ -71,30 +72,10 @@ export default function CompanyChat() {
     enabled: !!company?.id,
   });
 
-  const { data: conversations = [] } = useQuery<Conversation[]>({
-    queryKey: ["/api/conversations", company?.id],
-    queryFn: async () => {
-      const res = await apiRequest("GET", `/api/conversations?companyId=${company!.id}`);
-      return res.json();
-    },
-    enabled: !!company?.id,
-  });
+  // Find selected agent
+  const selectedAgent = agents.find(agent => agent.id === agentId);
 
-  const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
-
-  const { data: fetchedConversation } = useQuery<Conversation>({
-    queryKey: ["/api/conversations", selectedAgentId],
-    queryFn: async () => {
-      const res = await apiRequest("POST", "/api/conversations", {
-        title: `Chat with ${selectedAgent?.name}`,
-        agentId: selectedAgentId,
-        userId: 1
-      });
-      return res.json();
-    },
-    enabled: !!selectedAgentId && !!selectedAgent,
-  });
-
+  // Fetch messages for current conversation
   const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
     queryKey: ["/api/conversations", currentConversation?.id, "messages"],
     queryFn: async () => {
@@ -104,51 +85,63 @@ export default function CompanyChat() {
     enabled: !!currentConversation?.id,
   });
 
+  // Create conversation mutation
+  const createConversationMutation = useMutation({
+    mutationFn: async ({ agentId, title }: { agentId: number; title: string }) => {
+      const res = await apiRequest("POST", "/api/conversations", {
+        title,
+        agentId,
+      });
+      return res.json();
+    },
+    onSuccess: (conversation: Conversation) => {
+      setCurrentConversation(conversation);
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    },
+  });
+
+  // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      if (!currentConversation) throw new Error("No conversation");
-      
+    mutationFn: async ({ content, conversationId }: { content: string; conversationId: number }) => {
       const res = await apiRequest("POST", "/api/messages", {
-        conversationId: currentConversation.id,
         content,
-        role: "user"
+        conversationId,
+        role: "user",
       });
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", currentConversation?.id, "messages"] });
       setMessage("");
-      queryClient.invalidateQueries({
-        queryKey: ["/api/conversations", currentConversation?.id, "messages"],
-      });
     },
   });
 
+  // Initialize conversation when agent is selected
   useEffect(() => {
-    if (fetchedConversation) {
-      setCurrentConversation(fetchedConversation);
+    if (selectedAgent && !currentConversation) {
+      createConversationMutation.mutate({
+        agentId: selectedAgent.id,
+        title: `Chat with ${selectedAgent.name}`,
+      });
     }
-  }, [fetchedConversation]);
-
-  const handleAgentChange = (newAgentId: string) => {
-    const agentIdNum = parseInt(newAgentId);
-    setSelectedAgentId(agentIdNum);
-    setLocation(`/${companySlug}/chat/${agentIdNum}`);
-  };
+  }, [selectedAgent, currentConversation]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim()) {
-      sendMessageMutation.mutate(message.trim());
+    if (message.trim() && currentConversation) {
+      sendMessageMutation.mutate({
+        content: message.trim(),
+        conversationId: currentConversation.id,
+      });
     }
   };
 
-  // Now handle loading and error states AFTER all hooks
   if (companyLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Bot className="h-16 w-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
-          <p className="text-lg text-muted-foreground">Loading...</p>
+          <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading company...</p>
         </div>
       </div>
     );
@@ -157,19 +150,35 @@ export default function CompanyChat() {
   if (!company) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <Bot className="h-24 w-24 mx-auto text-muted-foreground mb-6" />
-          <h1 className="text-3xl font-bold mb-4">Company Not Found</h1>
-          <p className="text-muted-foreground mb-8">
-            The company "{companySlug}" could not be found. Please check the URL and try again.
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Company Not Found</h1>
+          <p className="text-muted-foreground mb-6">
+            The company "{companySlug}" could not be found.
           </p>
-          <Button asChild>
-            <Link href="/">Go Home</Link>
-          </Button>
+          <Link href="/">
+            <Button>Return Home</Button>
+          </Link>
         </div>
       </div>
     );
   }
+
+  // Fetch all conversations for this company
+  const { data: conversations = [] } = useQuery<Conversation[]>({
+    queryKey: ["/api/conversations", company?.id],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/conversations?companyId=${company!.id}`);
+      return res.json();
+    },
+    enabled: !!company?.id,
+  });
+
+  // Handle agent selection change
+  const handleAgentChange = (newAgentId: string) => {
+    const agentIdNum = parseInt(newAgentId);
+    setSelectedAgentId(agentIdNum);
+    setLocation(`/${companySlug}/chat/${agentIdNum}`);
+  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -180,11 +189,11 @@ export default function CompanyChat() {
           <div className="flex items-center gap-3 mb-4">
             <Avatar className="h-10 w-10">
               <AvatarFallback className="bg-primary text-primary-foreground">
-                {company.name.charAt(0)}
+                {company?.name.charAt(0)}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="font-semibold">{company.name}</h1>
+              <h1 className="font-semibold">{company?.name}</h1>
               <p className="text-sm text-muted-foreground">AI Assistant Platform</p>
             </div>
           </div>

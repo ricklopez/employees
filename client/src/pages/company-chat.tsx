@@ -608,7 +608,9 @@ function LinksModalContent({ selectedAgentId, onClose }: {
 
   const handleUpdateLink = () => {
     if (editingLink) {
-      updateLinkMutation.mutate(editingLink);
+      // Remove timestamp fields that shouldn't be updated
+      const { createdAt, createdByUserId, ...updateData } = editingLink;
+      updateLinkMutation.mutate({ id: editingLink.id, ...updateData });
     }
   };
 

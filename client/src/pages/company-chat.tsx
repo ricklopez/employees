@@ -1196,11 +1196,19 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
                     type="submit"
                     disabled={createSkillMutation.isPending || updateSkillMutation.isPending}
                     className="bg-pink-600 hover:bg-pink-700"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       console.log('Create Skill button clicked');
                       console.log('Form is valid:', form.formState.isValid);
                       console.log('Form errors:', form.formState.errors);
-                      // Don't prevent default - let form handle submission
+                      
+                      // Manually validate and submit if valid
+                      const isValid = await form.trigger();
+                      if (isValid) {
+                        console.log('Form validation passed, calling onSubmit');
+                        form.handleSubmit(onSubmit)();
+                      } else {
+                        console.log('Form validation failed');
+                      }
                     }}
                   >
                     {editingSkill ? "Update Skill" : "Create Skill"}

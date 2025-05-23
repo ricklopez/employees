@@ -14,7 +14,9 @@ import {
   MoreVertical,
   MessageSquare,
   LogOut,
+  Shield,
 } from "lucide-react";
+import { Link } from "wouter";
 
 interface SidebarProps {
   isMobileOpen: boolean;
@@ -103,6 +105,18 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
             <Plus className="h-5 w-5" />
           </Button>
         </div>
+
+        {/* Admin Navigation - only show for admins */}
+        {user?.role === "admin" && (
+          <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+            <Link href="/admin">
+              <Button variant="outline" size="sm" className="w-full">
+                <Shield className="h-4 w-4 mr-2" />
+                Admin Dashboard
+              </Button>
+            </Link>
+          </div>
+        )}
 
         {/* Agent Selector */}
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">

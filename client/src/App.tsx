@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import NotFound from "@/pages/not-found";
 import Chat from "@/pages/chat";
 import AuthPage from "@/pages/auth-page";
+import AdminDashboard from "@/pages/admin-dashboard";
 import { AgentProvider } from "@/lib/agent-context";
 import { ChatProvider } from "@/lib/chat-context";
 
@@ -16,6 +17,7 @@ function Router() {
   return (
     <Switch>
       <ProtectedRoute path="/" component={Chat} />
+      <ProtectedRoute path="/admin" component={AdminDashboard} requireRole={["admin"]} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

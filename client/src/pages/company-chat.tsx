@@ -962,7 +962,7 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
     const skillData = {
       ...data,
       agentId: selectedAgentId,
-      createdByUserId: user?.id
+      createdByUserId: 1  // Will be set by the server from the authenticated user
     };
     
     console.log('Submitting skill data:', skillData);
@@ -1085,7 +1085,10 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
                             min="0"
                             placeholder="0.00"
                             {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                              field.onChange(isNaN(value) ? 0 : value);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />

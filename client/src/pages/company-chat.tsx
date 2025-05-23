@@ -123,6 +123,55 @@ export default function CompanyChat() {
     staleTime: 0, // Always consider data stale to force fresh fetches
   });
 
+  // CSV Upload Mutation for Payroll Specialist
+  const uploadCsvMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!currentConversation) throw new Error("No conversation");
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('conversationId', currentConversation.id.toString());
+      formData.append('agentId', selectedAgentId?.toString() || '');
+      
+      const response = await fetch('/api/process-csv', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to process CSV');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "CSV Processed Successfully!",
+        description: `Your transaction CSV has been categorized and is ready for download.`,
+      });
+      
+      // Add a message to the conversation with the download link
+      if (currentConversation && data.downloadUrl) {
+        apiRequest("POST", "/api/messages", {
+          conversationId: currentConversation.id,
+          content: `I've successfully processed your CSV file and categorized all transactions. You can download the categorized file here: [Download Processed CSV](${data.downloadUrl})`,
+          role: "assistant"
+        }).then(() => {
+          queryClient.invalidateQueries({
+            queryKey: ["/api/conversations", currentConversation?.id, "messages"],
+          });
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "CSV Processing Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!currentConversation) throw new Error("No conversation");
@@ -487,6 +536,61 @@ export default function CompanyChat() {
                 </div>
               </ScrollArea>
             </div>
+
+            {/* CSV Upload Area for Payroll Specialist */}
+            {selectedAgent?.name === "Payroll Specialist" && (
+              <div className="border-t border-b bg-card p-4">
+                <div className="mb-3">
+                  <h4 className="text-sm font-medium text-foreground mb-1">Transaction Processing</h4>
+                  <p className="text-xs text-muted-foreground">Upload your CSV bank statement for automatic transaction categorization</p>
+                </div>
+                <div 
+                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors cursor-pointer"
+                  onClick={() => document.getElementById('csv-upload')?.click()}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.add('border-primary');
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.classList.remove('border-primary');
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.remove('border-primary');
+                    const files = Array.from(e.dataTransfer.files);
+                    const csvFile = files.find(f => f.name.endsWith('.csv'));
+                    if (csvFile) {
+                      uploadCsvMutation.mutate(csvFile);
+                    }
+                  }}
+                >
+                  <input
+                    id="csv-upload"
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        uploadCsvMutation.mutate(file);
+                      }
+                    }}
+                  />
+                  {uploadCsvMutation.isPending ? (
+                    <div className="flex flex-col items-center">
+                      <Loader2 className="h-8 w-8 text-muted-foreground animate-spin mb-2" />
+                      <p className="text-sm text-muted-foreground">Processing CSV...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <p className="text-sm text-foreground font-medium">Upload CSV Bank Statement</p>
+                      <p className="text-xs text-muted-foreground mt-1">Click or drag & drop your CSV file here</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Message Input */}
             <div className="border-t bg-card p-4">

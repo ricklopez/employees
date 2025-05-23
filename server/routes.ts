@@ -372,6 +372,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced CSV Processing for Payroll Specialist with OpenAI categorization
+  app.post('/api/process-csv', upload.single('file'), async (req: MulterRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const conversationId = parseInt(req.body.conversationId);
+      const agentId = parseInt(req.body.agentId);
+
+      // Read and parse the CSV file
+      const csvData = await parseCsvFile(req.file.path);
+      
+      // Use OpenAI to categorize transactions with enhanced prompting for payroll context
+      const enhancedPrompt = `You are a payroll specialist analyzing bank transactions. Please categorize each transaction appropriately for payroll and tax purposes.
+
+For debit transactions, especially payments to individuals, consider categorizing as:
+- CONTRACTOR (for payments to independent contractors)
+- EMPLOYEE_WAGES (for regular employee payments)
+- BENEFITS (for employee benefits)
+- TAXES (for tax payments)
+- OFFICE_EXPENSES (for business supplies/equipment)
+- PROFESSIONAL_SERVICES (for legal, accounting services)
+
+For credit transactions, consider:
+- REVENUE (for income from sales/services)
+- LOAN_PROCEEDS (for borrowed funds)
+- REFUNDS (for returned payments)
+
+Analyze these transactions and provide appropriate categories:`;
+
+      const classifiedTransactions = await analyzeTransactions(csvData, enhancedPrompt);
+      
+      // Create enhanced CSV content with categorizations
+      const csvHeaders = Object.keys(csvData[0]).join(',') + ',AI_Category,Payroll_Notes\n';
+      const csvRows = classifiedTransactions.map((tx, index) => {
+        const originalRow = Object.values(csvData[index]).join(',');
+        const payrollNotes = tx.category === 'CONTRACTOR' ? 'Potential 1099 required' : 
+                           tx.category === 'EMPLOYEE_WAGES' ? 'W-2 wages' :
+                           tx.category === 'TAXES' ? 'Tax payment' : 'Review for classification';
+        return `${originalRow},${tx.category},"${payrollNotes}"`;
+      }).join('\n');
+      
+      const enhancedCsvContent = csvHeaders + csvRows;
+      
+      // Save the processed file to uploads directory
+      const timestamp = Date.now();
+      const processedFilename = `processed-${timestamp}-${req.file.originalname}`;
+      const processedFilePath = path.join(process.cwd(), 'uploads', processedFilename);
+      
+      fs.writeFileSync(processedFilePath, enhancedCsvContent);
+      
+      // Create download URL
+      const downloadUrl = `/api/download/${processedFilename}`;
+      
+      res.status(200).json({
+        success: true,
+        message: 'CSV processed successfully with AI categorization',
+        originalFilename: req.file.originalname,
+        processedFilename: processedFilename,
+        downloadUrl: downloadUrl,
+        transactionCount: classifiedTransactions.length,
+        summary: {
+          contractors: classifiedTransactions.filter(tx => tx.category === 'CONTRACTOR').length,
+          employees: classifiedTransactions.filter(tx => tx.category === 'EMPLOYEE_WAGES').length,
+          taxes: classifiedTransactions.filter(tx => tx.category === 'TAXES').length,
+          other: classifiedTransactions.filter(tx => !['CONTRACTOR', 'EMPLOYEE_WAGES', 'TAXES'].includes(tx.category)).length
+        }
+      });
+      
+    } catch (error: any) {
+      console.error('CSV processing error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Download processed CSV files
+  app.get('/api/download/:filename', (req: Request, res: Response) => {
+    try {
+      const filename = req.params.filename;
+      const filePath = path.join(process.cwd(), 'uploads', filename);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+      
+      res.download(filePath, filename, (err) => {
+        if (err) {
+          console.error('Download error:', err);
+          res.status(500).json({ message: 'Error downloading file' });
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Get transactions for a conversation
   app.get('/api/conversations/:id/transactions', async (req: Request, res: Response) => {
     try {

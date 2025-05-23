@@ -861,9 +861,16 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
 
   const { data: skills = [], isLoading, refetch } = useQuery({
     queryKey: [`/api/agents/${selectedAgentId}/skills`],
+    queryFn: async () => {
+      const response = await fetch(`/api/agents/${selectedAgentId}/skills`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch skills');
+      }
+      return response.json();
+    },
     enabled: !!selectedAgentId,
     staleTime: 0, // Always refetch
-    cacheTime: 0, // Don't cache
+    gcTime: 0, // Don't cache
   });
 
   console.log('Skills query - selectedAgentId:', selectedAgentId);

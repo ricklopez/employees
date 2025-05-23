@@ -51,6 +51,7 @@ export default function CompanyChat() {
   const [message, setMessage] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(agentId);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   // Always call ALL hooks at the top level - never conditionally
   const { data: company, isLoading: companyLoading } = useQuery<Company>({
@@ -111,6 +112,7 @@ export default function CompanyChat() {
     mutationFn: async (content: string) => {
       if (!currentConversation) throw new Error("No conversation");
       
+      setIsTyping(true);
       const res = await apiRequest("POST", "/api/messages", {
         conversationId: currentConversation.id,
         content,
@@ -120,9 +122,16 @@ export default function CompanyChat() {
     },
     onSuccess: () => {
       setMessage("");
+      setIsTyping(false);
       queryClient.invalidateQueries({
         queryKey: ["/api/conversations", currentConversation?.id, "messages"],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/conversations", company?.id],
+      });
+    },
+    onError: () => {
+      setIsTyping(false);
     },
   });
 
@@ -136,6 +145,16 @@ export default function CompanyChat() {
     const agentIdNum = parseInt(newAgentId);
     setSelectedAgentId(agentIdNum);
     setLocation(`/${companySlug}/chat/${agentIdNum}`);
+  };
+
+  const handleStartNewConversation = () => {
+    if (selectedAgentId && selectedAgent) {
+      setCurrentConversation(null);
+      // This will trigger the conversation query to create a new one
+      queryClient.invalidateQueries({
+        queryKey: ["/api/conversations", selectedAgentId],
+      });
+    }
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -227,6 +246,17 @@ export default function CompanyChat() {
                 ))}
               </SelectContent>
             </Select>
+
+            {/* New Conversation Button */}
+            <Button 
+              onClick={() => handleStartNewConversation()}
+              className="w-full"
+              variant="outline"
+              disabled={!selectedAgentId}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Conversation
+            </Button>
           </div>
         </div>
 
@@ -313,41 +343,61 @@ export default function CompanyChat() {
                       </p>
                     </div>
                   ) : (
-                    messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex gap-3 ${
-                          msg.role === "user" ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        {msg.role === "assistant" && (
+                    <>
+                      {messages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`flex gap-3 ${
+                            msg.role === "user" ? "justify-end" : "justify-start"
+                          }`}
+                        >
+                          {msg.role === "assistant" && (
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarFallback>
+                                <Bot className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          <div
+                            className={`max-w-[70%] p-3 rounded-lg ${
+                              msg.role === "user"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            <p className="text-xs opacity-70 mt-1">
+                              {new Date(msg.createdAt).toLocaleTimeString()}
+                            </p>
+                          </div>
+                          {msg.role === "user" && (
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarFallback>
+                                <User className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {/* Typing Indicator */}
+                      {isTyping && (
+                        <div className="flex gap-3 justify-start">
                           <Avatar className="h-8 w-8 flex-shrink-0">
                             <AvatarFallback>
                               <Bot className="h-4 w-4" />
                             </AvatarFallback>
                           </Avatar>
-                        )}
-                        <div
-                          className={`max-w-[70%] p-3 rounded-lg ${
-                            msg.role === "user"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {new Date(msg.createdAt).toLocaleTimeString()}
-                          </p>
+                          <div className="bg-muted p-3 rounded-lg">
+                            <div className="flex gap-1">
+                              <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                          </div>
                         </div>
-                        {msg.role === "user" && (
-                          <Avatar className="h-8 w-8 flex-shrink-0">
-                            <AvatarFallback>
-                              <User className="h-4 w-4" />
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                      </div>
-                    ))
+                      )}
+                    </>
                   )}
                 </div>
               </ScrollArea>

@@ -11,16 +11,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Users, Bot, Plus, Settings } from "lucide-react";
-import { Company, Agent, User } from "@shared/schema";
 
-type Company = {
+type CompanyType = {
   id: number;
   name: string;
   slug: string;
   createdAt: string;
 };
 
-type Agent = {
+type AgentType = {
   id: number;
   name: string;
   description: string;
@@ -29,7 +28,7 @@ type Agent = {
   isGlobal: boolean;
 };
 
-type User = {
+type UserType = {
   id: number;
   username: string;
   email: string;
@@ -44,7 +43,7 @@ export default function AdminDashboard() {
   const [isCreateCompanyOpen, setIsCreateCompanyOpen] = useState(false);
 
   // Fetch companies
-  const { data: companies = [], isLoading: companiesLoading } = useQuery<Company[]>({
+  const { data: companies = [], isLoading: companiesLoading } = useQuery<CompanyType[]>({
     queryKey: ["/api/admin/companies"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/companies");
@@ -53,7 +52,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch all agents
-  const { data: agents = [], isLoading: agentsLoading } = useQuery<Agent[]>({
+  const { data: agents = [], isLoading: agentsLoading } = useQuery<AgentType[]>({
     queryKey: ["/api/agents"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/agents");

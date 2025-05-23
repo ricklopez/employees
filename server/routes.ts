@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { analyzeTransactions } from "./services/openai";
 import { parseCsvFile } from "./services/csvParser";
+import { requireAuth, requireRole } from "./auth";
 import fs from "fs";
 
 // Define custom Request type with file property added by multer
@@ -49,6 +50,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         cb(new Error('Only CSV files are allowed'));
       }
+    }
+  });
+
+  // Admin API routes
+  app.get('/api/admin/companies', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+    try {
+      const companies = await storage.getCompanies();
+      res.json(companies);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/admin/companies', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+    try {
+      const { name, slug } = req.body;
+      
+      if (!name || !slug) {
+        return res.status(400).json({ message: 'Name and slug are required' });
+      }
+
+      // Check if slug already exists
+      const existingCompany = await storage.getCompanyBySlug(slug);
+      if (existingCompany) {
+        return res.status(400).json({ message: 'Company with this slug already exists' });
+      }
+
+      const company = await storage.createCompany({ name, slug });
+      res.status(201).json(company);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

@@ -47,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Welcome back!",
         description: `Logged in as ${user.username}`,
       });
+      // Force a page refresh to trigger redirect
+      window.location.href = "/";
     },
     onError: (error: Error) => {
       toast({
@@ -68,6 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Account created!",
         description: `Welcome ${user.username}`,
       });
+      // Force a page refresh to trigger redirect
+      window.location.href = "/";
     },
     onError: (error: Error) => {
       toast({

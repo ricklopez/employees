@@ -61,6 +61,31 @@ export interface IStorage {
   createTransactions(transactions: InsertTransaction[]): Promise<Transaction[]>;
   getTransactionSummary(conversationId: number): Promise<{ category: string; total: number; count: number; }[]>;
 
+  // Skills methods
+  getSkills(agentId: number): Promise<Skill[]>;
+  getSkill(id: number): Promise<Skill | undefined>;
+  createSkill(skill: InsertSkill): Promise<Skill>;
+  updateSkill(id: number, skill: Partial<InsertSkill>): Promise<Skill | undefined>;
+  deleteSkill(id: number): Promise<void>;
+
+  // Tasks methods
+  getTasks(agentId: number): Promise<Task[]>;
+  getTask(id: number): Promise<Task | undefined>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: number, task: Partial<InsertTask>): Promise<Task | undefined>;
+  deleteTask(id: number): Promise<void>;
+
+  // Task Comments methods
+  getTaskComments(taskId: number): Promise<TaskComment[]>;
+  createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
+
+  // Links methods
+  getLinks(agentId: number): Promise<Link[]>;
+  getLink(id: number): Promise<Link | undefined>;
+  createLink(link: InsertLink): Promise<Link>;
+  updateLink(id: number, link: Partial<InsertLink>): Promise<Link | undefined>;
+  deleteLink(id: number): Promise<void>;
+
   // Session store for authentication
   sessionStore: any;
 }
@@ -423,6 +448,88 @@ export class DatabaseStorage implements IStorage {
       total,
       count,
     }));
+  }
+
+  // Skills methods
+  async getSkills(agentId: number): Promise<Skill[]> {
+    return await db.select().from(skills).where(eq(skills.agentId, agentId));
+  }
+
+  async getSkill(id: number): Promise<Skill | undefined> {
+    const [skill] = await db.select().from(skills).where(eq(skills.id, id));
+    return skill || undefined;
+  }
+
+  async createSkill(insertSkill: InsertSkill): Promise<Skill> {
+    const [skill] = await db.insert(skills).values(insertSkill).returning();
+    return skill;
+  }
+
+  async updateSkill(id: number, skillUpdate: Partial<InsertSkill>): Promise<Skill | undefined> {
+    const [skill] = await db.update(skills).set(skillUpdate).where(eq(skills.id, id)).returning();
+    return skill || undefined;
+  }
+
+  async deleteSkill(id: number): Promise<void> {
+    await db.delete(skills).where(eq(skills.id, id));
+  }
+
+  // Tasks methods
+  async getTasks(agentId: number): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.agentId, agentId));
+  }
+
+  async getTask(id: number): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task || undefined;
+  }
+
+  async createTask(insertTask: InsertTask): Promise<Task> {
+    const [task] = await db.insert(tasks).values(insertTask).returning();
+    return task;
+  }
+
+  async updateTask(id: number, taskUpdate: Partial<InsertTask>): Promise<Task | undefined> {
+    const [task] = await db.update(tasks).set(taskUpdate).where(eq(tasks.id, id)).returning();
+    return task || undefined;
+  }
+
+  async deleteTask(id: number): Promise<void> {
+    await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  // Task Comments methods
+  async getTaskComments(taskId: number): Promise<TaskComment[]> {
+    return await db.select().from(taskComments).where(eq(taskComments.taskId, taskId));
+  }
+
+  async createTaskComment(insertComment: InsertTaskComment): Promise<TaskComment> {
+    const [comment] = await db.insert(taskComments).values(insertComment).returning();
+    return comment;
+  }
+
+  // Links methods
+  async getLinks(agentId: number): Promise<Link[]> {
+    return await db.select().from(links).where(eq(links.agentId, agentId));
+  }
+
+  async getLink(id: number): Promise<Link | undefined> {
+    const [link] = await db.select().from(links).where(eq(links.id, id));
+    return link || undefined;
+  }
+
+  async createLink(insertLink: InsertLink): Promise<Link> {
+    const [link] = await db.insert(links).values(insertLink).returning();
+    return link;
+  }
+
+  async updateLink(id: number, linkUpdate: Partial<InsertLink>): Promise<Link | undefined> {
+    const [link] = await db.update(links).set(linkUpdate).where(eq(links.id, id)).returning();
+    return link || undefined;
+  }
+
+  async deleteLink(id: number): Promise<void> {
+    await db.delete(links).where(eq(links.id, id));
   }
 }
 

@@ -361,11 +361,38 @@ export default function CompanyChat() {
           <>
             {/* Chat Header */}
             <div className="border-b bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="text-2xl">{selectedAgent.icon}</div>
-                <div>
-                  <h2 className="font-semibold">{selectedAgent.name}</h2>
-                  <p className="text-sm text-muted-foreground">{selectedAgent.description}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl">{selectedAgent.icon}</div>
+                  <div>
+                    <h2 className="font-semibold">{selectedAgent.name}</h2>
+                    <p className="text-sm text-muted-foreground">{selectedAgent.description}</p>
+                  </div>
+                </div>
+                
+                {/* Skills, Tasks, Links Buttons */}
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="border-pink-500 text-pink-500 hover:bg-pink-50"
+                  >
+                    Skills
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="border-green-500 text-green-500 hover:bg-green-50"
+                  >
+                    Tasks
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="border-blue-500 text-blue-500 hover:bg-blue-50"
+                  >
+                    Links
+                  </Button>
                 </div>
               </div>
             </div>

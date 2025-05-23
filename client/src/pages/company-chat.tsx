@@ -910,9 +910,15 @@ function SkillsModalContent({ selectedAgentId, onClose }: {
 
   const form = useForm({
     resolver: zodResolver(
-      insertSkillSchema.extend({
+      z.object({
+        title: z.string().min(1, "Title is required"),
+        description: z.string().min(1, "Description is required"),
         costPerUnit: z.coerce.number().min(0, "Cost must be positive"),
+        unitLabel: z.string().optional(),
         limitUnits: z.coerce.number().min(1, "Limit must be at least 1"),
+        limitInterval: z.string(),
+        status: z.string(),
+        playbookUrl: z.string().optional(),
       })
     ),
     defaultValues: {

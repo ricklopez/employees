@@ -71,7 +71,7 @@ export default function CompanyChat() {
     enabled: !!company?.id,
   });
 
-  const { data: conversations = [] } = useQuery<Conversation[]>({
+  const { data: conversationsData } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations", company?.id],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/conversations?companyId=${company!.id}`);
@@ -79,6 +79,9 @@ export default function CompanyChat() {
     },
     enabled: !!company?.id,
   });
+
+  // Ensure conversations is always an array
+  const conversations = Array.isArray(conversationsData) ? conversationsData : [];
 
   const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
 

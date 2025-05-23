@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAgents } from "@/lib/agent-context";
 import { useChat } from "@/lib/chat-context";
+import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +13,7 @@ import {
   User,
   MoreVertical,
   MessageSquare,
+  LogOut,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -27,6 +29,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     setCurrentConversation,
     createConversation,
   } = useChat();
+  const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [truncatedConversations, setTruncatedConversations] = useState<
     typeof conversations
@@ -176,12 +179,15 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
 
         {/* User Info & Settings */}
         <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <User className="h-4 w-4 text-primary" />
               </div>
-              <span className="ml-2 text-sm font-medium">User</span>
+              <div className="ml-2">
+                <div className="text-sm font-medium">{user?.username}</div>
+                <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace('_', ' ')}</div>
+              </div>
             </div>
             <div className="flex">
               <ThemeToggle />
@@ -190,6 +196,16 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
               </Button>
             </div>
           </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            {logoutMutation.isPending ? "Logging out..." : "Logout"}
+          </Button>
         </div>
       </div>
 

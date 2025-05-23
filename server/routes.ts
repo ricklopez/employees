@@ -461,6 +461,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Skills API routes
+  app.get('/api/agents/:agentId/skills', async (req: Request, res: Response) => {
+    try {
+      const agentId = parseInt(req.params.agentId);
+      const skills = await storage.getSkills(agentId);
+      res.json(skills);
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+      res.status(500).json({ error: 'Failed to fetch skills' });
+    }
+  });
+
+  app.post('/api/agents/:agentId/skills', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const agentId = parseInt(req.params.agentId);
+      const skillData = {
+        ...req.body,
+        agentId,
+        createdByUserId: req.user?.id
+      };
+      const skill = await storage.createSkill(skillData);
+      res.status(201).json(skill);
+    } catch (error) {
+      console.error('Error creating skill:', error);
+      res.status(500).json({ error: 'Failed to create skill' });
+    }
+  });
+
+  app.put('/api/skills/:id', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const skillId = parseInt(req.params.id);
+      // Remove timestamp fields that shouldn't be updated
+      const { createdAt, createdByUserId, ...updateData } = req.body;
+      const skill = await storage.updateSkill(skillId, updateData);
+      if (!skill) {
+        return res.status(404).json({ error: 'Skill not found' });
+      }
+      res.json(skill);
+    } catch (error) {
+      console.error('Error updating skill:', error);
+      res.status(500).json({ error: 'Failed to update skill' });
+    }
+  });
+
+  app.delete('/api/skills/:id', requireAuth, requireRole('admin', 'company_manager'), async (req: Request, res: Response) => {
+    try {
+      const skillId = parseInt(req.params.id);
+      await storage.deleteSkill(skillId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting skill:', error);
+      res.status(500).json({ error: 'Failed to delete skill' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

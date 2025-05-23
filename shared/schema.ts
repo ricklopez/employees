@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, json, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, json, timestamp, varchar, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -167,9 +167,14 @@ export const skills = pgTable("skills", {
   template: text("template"), // Task template for this skill
   functionName: text("function_name"), // Function this skill can call
   parameters: text("parameters"), // JSON string of parameters
-  active: boolean("active").default(true),
+  costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 2 }), // Cost per unit
+  unitLabel: text("unit_label"), // e.g., "per hour", "per task", "per call"
+  limitUnits: integer("limit_units"), // Maximum units allowed
+  limitInterval: text("limit_interval"), // e.g., "daily", "weekly", "monthly"
+  status: text("status").notNull().default("draft"), // draft, active, disabled
+  playbookUrl: text("playbook_url"), // URL to skill documentation/playbook
   createdAt: timestamp("created_at").defaultNow(),
-  createdByUserId: integer("created_by_user_id").references(() => users.id),
+  createdByUserId: integer("created_by_user_id").references(() => users.id).notNull(),
 });
 
 export const insertSkillSchema = createInsertSchema(skills).pick({
@@ -179,7 +184,12 @@ export const insertSkillSchema = createInsertSchema(skills).pick({
   template: true,
   functionName: true,
   parameters: true,
-  active: true,
+  costPerUnit: true,
+  unitLabel: true,
+  limitUnits: true,
+  limitInterval: true,
+  status: true,
+  playbookUrl: true,
   createdByUserId: true,
 });
 

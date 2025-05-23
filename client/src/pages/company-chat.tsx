@@ -57,6 +57,7 @@ export default function CompanyChat() {
   const [isTyping, setIsTyping] = useState(false);
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
   const [isLinksModalOpen, setIsLinksModalOpen] = useState(false);
+  const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
 
   // Always call ALL hooks at the top level - never conditionally
   const { data: company, isLoading: companyLoading } = useQuery<Company>({
